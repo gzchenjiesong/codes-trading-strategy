@@ -1,0 +1,11 @@
+{
+	"id": "codes-trading-strategy",
+	"name": "TradingStrategy",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Code's trading strategy viewer",
+	"author": "Code",
+	"authorUrl": "https://obsidian.md",
+	"fundingUrl": "https://obsidian.md/pricing",
+	"isDesktopOnly": false
+}
