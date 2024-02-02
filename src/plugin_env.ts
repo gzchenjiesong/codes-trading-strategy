@@ -32,7 +32,7 @@ export class PluginEnv
     GetStockRemotePrice(stock_no: string): number
     {
         const price = this.stock_remote_price_dict.get(stock_no);
-        if (typeof(price) === "number")
+        if (price != undefined)
         {
             return price;
         }

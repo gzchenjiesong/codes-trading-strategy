@@ -22,6 +22,7 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
+		"danfojs": "^1.1.2",
 		"ts-md5": "^1.3.1"
 	}
 }

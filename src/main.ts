@@ -1,6 +1,7 @@
 import { App, Plugin, PluginSettingTab, PluginManifest, Setting, WorkspaceLeaf, TFile, TFolder } from 'obsidian';
 import { GTVView, VIEW_TYPE_GTV } from "./grid_view"
 import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
+import { CorView, VIEW_TYPE_COR } from './cor_view';
 import { SETTING_NAME } from "./lang_str"
 import { GridTradingSettings, PluginBaseSettings, SetSettingValue, GetSettingValue } from "./settings"
 import { GetETFCurrentPrice, DebugLog } from './remote_util';
@@ -44,8 +45,13 @@ export default class TradingStrategy extends Plugin
             const gto_view = new GTOView(leaf, this.app.vault, this.plugin_env);
             return gto_view;
         });
+        this.registerView(VIEW_TYPE_COR, (leaf: WorkspaceLeaf) => {
+            const cor_view = new CorView(leaf);
+            return cor_view;
+        })
         this.registerExtensions(["gtv"], VIEW_TYPE_GTV);
         this.registerExtensions(["gto"], VIEW_TYPE_GTO);
+        this.registerExtensions(["cor"], VIEW_TYPE_COR);
     }
 
     onunload() {
@@ -95,7 +101,9 @@ export default class TradingStrategy extends Plugin
                     let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name);
                     grid_trading.InitGridTrading(content);
                     //DebugLog("Try to fetch remote price, ", grid_trading.market_code, grid_trading.target_stock);
-                    const current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), "b192f53a6d6928033");
+                    let current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), "b192f53a6d6928033");
+                    // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
+                    current_price = Number(current_price);
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
                     DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);
@@ -111,7 +119,8 @@ export default class TradingStrategy extends Plugin
                         const strs = lines[index].split(",");
                         if (strs[0] != "BUY" && strs[0] != "SELL")
                         {
-                            const current_price = await GetETFCurrentPrice(strs[2] + strs[0], "b192f53a6d6928033");
+                            let current_price = await GetETFCurrentPrice(strs[2] + strs[0], "b192f53a6d6928033");
+                            current_price = Number(current_price);
                             this.plugin_env.stock_remote_price_dict.set(strs[0], current_price);
                             DebugLog("查询 ", strs[1], " 当前最新价格为: ", current_price);
                         }

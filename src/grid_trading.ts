@@ -6,6 +6,7 @@ import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW
 import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
 import { PluginEnv } from "./plugin_env";
+import { count } from "console";
 
 
 export class GridTrading 
@@ -60,8 +61,8 @@ export class GridTrading
 
     InitTradingOverview()
     {
-        this.stock_overview = [GRID_COLOR_STOCK_OVERVIEW, String(this.target_stock), this.stock_name, String(this.target_price), String(this.current_price),
-                ToPercent(this.current_price / this.target_price)];
+        this.stock_overview = [GRID_COLOR_STOCK_OVERVIEW, String(this.target_stock), this.stock_name, this.target_price.toFixed(3), this.current_price.toFixed(3),
+                ToPercent(this.current_price / this.target_price, 1)];
         this.stock_buy_overview = [];
         if (this.buy_monitor_rows.length > 0)
         {
@@ -154,7 +155,7 @@ export class GridTrading
         this.stock_table = [
             ["标的代号", String(this.target_stock)],
             ["标的名称", this.stock_name],
-            ["当前价格", String(this.current_price), "价格百分位", String(Math.floor(this.current_price / this.target_price * 100)) + "%"],
+            ["当前价格", String(this.current_price), "价格百分位", ToPercent(this.current_price / this.target_price, 1)],
         ];
     }
 
@@ -251,7 +252,7 @@ export class GridTrading
         const scount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.SGRID_STEP_PCT);
         const mcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.MGRID_STEP_PCT);
         const lcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.LGRID_STEP_PCT);
-        const current_pct = Math.floor(this.current_price / this.target_price * 100) / 100.0;
+        const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let idx=0; idx<=scount; idx++)
         {
             this.trading_table[idx + 1] = this.GenerateOneRow(SGRID_TYPE_NAME_STR, idx, this.grid_settings.SGRID_STEP_PCT,
@@ -366,7 +367,8 @@ export class GridTrading
 
     GenerateOneRow(grid_name: string, idx: number, grid_step_pct: number, grid_retain_count: number, grid_add_pct: number)
     {
-        const price_step = MyFloor(1.0 - idx * grid_step_pct, 0.01);
+        //const price_step = MyFloor((100.0 - idx * grid_step_pct * 100.0) / 100.0, 0.01);
+        const price_step = (100 - idx * grid_step_pct * 100) / 100;
         const buy_price = MyFloor(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
         const buy_count = MyFloor(this.grid_settings.ONE_GRID_LIMIT * (1 + idx * grid_add_pct) / buy_price, this.grid_settings.MIN_BATCH_COUNT)
 

@@ -82,7 +82,13 @@ export class GTOView extends TextFileView
         const buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         const sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         const stock_price_dict: Map<string, number> = new Map<string, number>();
-        lines.forEach((line, idx) => {
+        for (let idx=0; idx<lines.length; idx++)
+        {
+            const line = lines[idx];
+            if (line.length <= 0)
+            {
+                continue
+            }
             const strs = line.split(",");
             if (strs[0] == "BUY")
             {
@@ -96,22 +102,26 @@ export class GTOView extends TextFileView
                     buy_table.push([GRID_COLOR_BUY_OVERVIEW, strs[1], strs[2], strs[3]]);
                 }
             }
-            else if (strs[0] == "SELL")
-            {
-                const trading_gap = ToTradingGap(Number(strs[6]), stock_price_dict.get(strs[1]), 2);
-                sell_table.push([GRID_COLOR_SELL_OVERVIEW, strs[1], strs[2], strs[3], strs[4], strs[5], strs[6], strs[7], strs[8], trading_gap])
-            }
             else
             {
-                let remote_price = this.plugin_env.GetStockRemotePrice(strs[0]);
-                if (remote_price == -1)
+                if (strs[0] == "SELL")
                 {
-                    remote_price = Number(strs[4]);
+                    const trading_gap = ToTradingGap(Number(strs[6]), stock_price_dict.get(strs[1]), 2);
+                    sell_table.push([GRID_COLOR_SELL_OVERVIEW, strs[1], strs[2], strs[3], strs[4], strs[5], strs[6], strs[7], strs[8], trading_gap])
                 }
-                stock_price_dict.set(strs[0], remote_price);
-                stock_table.push([GRID_COLOR_STOCK_OVERVIEW, strs[0], strs[1], strs[3], strs[4], (remote_price / Number(strs[3]) * 100).toFixed(0) + "%"]);
+                else
+                {
+                    let remote_price = this.plugin_env.GetStockRemotePrice(strs[0]);
+                    this.DebugLog("Info", "GetRemotePrice " + strs[0], String(remote_price));
+                    if (remote_price <= 0)
+                    {
+                        remote_price = Number(strs[4]);
+                    }
+                    stock_price_dict.set(strs[0], remote_price);
+                    stock_table.push([GRID_COLOR_STOCK_OVERVIEW, strs[0], strs[1], strs[3], String(remote_price), ToPercent(remote_price/ Number(strs[3]), 1)]);
+                }
             }
-        });
+        }
         this.appoint_stock_overview = [...stock_table, ...buy_table, ...sell_table];
     }
 
