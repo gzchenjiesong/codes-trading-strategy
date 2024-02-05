@@ -1,11 +1,15 @@
+/*
+    Main: 插件定义及主逻辑
+    设置面板选项
+*/
 import { App, Plugin, PluginSettingTab, PluginManifest, Setting, WorkspaceLeaf, TFile, TFolder } from 'obsidian';
+import { GridTradingSettings, PluginBaseSettings, SetSettingValue, GetSettingValue } from "./settings"
+import { GetETFCurrentPrice, DebugLog } from './remote_util';
 import { GTVView, VIEW_TYPE_GTV } from "./grid_view"
 import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
 import { CorView, VIEW_TYPE_COR } from './cor_view';
-import { SETTING_NAME } from "./lang_str"
-import { GridTradingSettings, PluginBaseSettings, SetSettingValue, GetSettingValue } from "./settings"
-import { GetETFCurrentPrice, DebugLog } from './remote_util';
 import { PluginEnv } from './plugin_env';
+import { SETTING_NAME } from "./lang_str"
 
 
 export default class TradingStrategy extends Plugin
