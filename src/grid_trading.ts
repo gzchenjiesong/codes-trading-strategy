@@ -1,12 +1,11 @@
 /*
-    网格策略的Viewer
+    网格策略的计算逻辑
 */
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
 import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
 import { PluginEnv } from "./plugin_env";
-import { count } from "console";
 
 
 export class GridTrading 
@@ -42,7 +41,7 @@ export class GridTrading
     constructor(plugin_env: PluginEnv)
     {
         this.plugin_env = plugin_env;
-        this.grid_settings = plugin_env.grid_settings;//.Clone();
+        this.grid_settings = plugin_env.grid_settings.Clone();
         this.debug_log = []
         this.data_md5 = "";
         this.is_empty = true;
@@ -131,17 +130,34 @@ export class GridTrading
         this.target_price = Number(strs[3]);
         this.current_price = Number(strs[4]);
 
+        // BASE,10000,0.67,0.005,0.001,100,0.1
+        // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
         // BUY,2024-01-23,小网0
+        this.grid_settings = this.plugin_env.grid_settings.Clone();
         this.trading_record = [];
         this.buy_grid_record = [];
         for (let idx=1; idx < lines.length; idx++)
         {
             const strs = lines[idx].split(",");
-            this.trading_record[idx] = [strs[0], strs[1], strs[2]];
-            if (strs[0] == "BUY") this.buy_grid_record.push(strs[2]);
-            if (strs[0] == "SELL") this.buy_grid_record.remove(strs[2]);
+            if (strs[0] == "BUY")
+            {
+                this.trading_record[idx] = [strs[0], strs[1], strs[2]];
+                this.buy_grid_record.push(strs[2]);
+            }
+            if (strs[0] == "SELL")
+            {
+                this.trading_record[idx] = [strs[0], strs[1], strs[2]];
+                this.buy_grid_record.remove(strs[2]);
+            }
+            if (strs[0] == "BASE")
+            {
+                this.grid_settings.UnpackBase(strs);
+            }
+            if (strs[0] == "STEP")
+            {
+                this.grid_settings.UnpackStep(strs);
+            }
         }
-        this.grid_settings = this.plugin_env.grid_settings;
         this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[0]);
         if (this.remote_current_price > 0)
         {
@@ -162,11 +178,9 @@ export class GridTrading
     InitGridParam()
     {
         this.param_table = [
-            ["首网目标价", String(this.target_price)],
-            ["买入金额上限", String(this.grid_settings.ONE_GRID_LIMIT)],
-            ["最大回撤值", String(this.grid_settings.MAX_SLUMP_PCT)],
-            ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT)],
-            ["每手份数额", String(this.grid_settings.MIN_BATCH_COUNT)],
+            ["首网目标价", String(this.target_price), "首网目标金额", String(this.grid_settings.ONE_GRID_LIMIT)],
+            ["最大回撤值", ToPercent(this.grid_settings.MAX_SLUMP_PCT), "最大涨跌幅", ToPercent(this.grid_settings.MAX_RISE_PCT)],
+            ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT), "每手份数额", String(this.grid_settings.MIN_BATCH_COUNT), "价格最小单位", String(this.grid_settings.MIN_ALIGN_PRICE)],
             ["小网步进值", String(this.grid_settings.SGRID_STEP_PCT), "中网步进值", String(this.grid_settings.MGRID_STEP_PCT), "大网步进值", String(this.grid_settings.LGRID_STEP_PCT)],
             ["投入追加值", String(this.grid_settings.SGRID_ADD_PCT), "投入追加值", String(this.grid_settings.MGRID_ADD_PCT), "投入追加值", String(this.grid_settings.LGRID_ADD_PCT)],
             ["保留利润数", String(this.grid_settings.SGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.MGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.LGRID_RETAIN_COUNT)],
@@ -231,7 +245,6 @@ export class GridTrading
         slump_pcts.sort((a, b) => a - b);
         for (const pct of slump_pcts)
         {
-            // this.DebugLog("info", "slump pct", String(pct / 100.0));
             const result = Analysis(pct / 100.0);
             for (let idx=0; idx<result.length; idx++)
             {
@@ -247,7 +260,7 @@ export class GridTrading
         this.buy_monitor_rows = []
         this.sell_monitor_rows = []
         this.trading_table = []
-        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额"];
+        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
 
         const scount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.SGRID_STEP_PCT);
         const mcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.MGRID_STEP_PCT);
@@ -379,6 +392,6 @@ export class GridTrading
         return [grid_name + String(idx), ToPercent(price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), 
                 buy_price.toFixed(3), String(buy_count), String(Math.ceil(buy_price * buy_count)),
                 (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), sell_price.toFixed(3),
-                String(sell_count), String(Math.ceil(sell_price * sell_count))];
+                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(buy_price, sell_price, 1), ToTradingGap(sell_price, buy_price, 1)];
     }
 }

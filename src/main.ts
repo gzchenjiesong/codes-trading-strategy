@@ -8,7 +8,7 @@ import { GetETFCurrentPrice, DebugLog } from './remote_util';
 import { GTVView, VIEW_TYPE_GTV } from "./grid_view"
 import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
 import { CorView, VIEW_TYPE_COR } from './cor_view';
-import { PluginEnv } from './plugin_env';
+import { PluginEnv, FETCH_CURRENT_PRICE } from './plugin_env';
 import { SETTING_NAME } from "./lang_str"
 
 
@@ -109,7 +109,7 @@ export default class TradingStrategy extends Plugin
                     // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
                     current_price = Number(current_price);
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
-                    DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
+                    //DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);
                 }
 
@@ -126,11 +126,12 @@ export default class TradingStrategy extends Plugin
                             let current_price = await GetETFCurrentPrice(strs[2] + strs[0], "b192f53a6d6928033");
                             current_price = Number(current_price);
                             this.plugin_env.stock_remote_price_dict.set(strs[0], current_price);
-                            DebugLog("查询 ", strs[1], " 当前最新价格为: ", current_price);
+                            //DebugLog("查询 ", strs[1], " 当前最新价格为: ", current_price);
                         }
                     }
                 }
             }
+            this.plugin_env.PublishEvent(FETCH_CURRENT_PRICE);
         }
     }
 }

@@ -4,7 +4,12 @@
 
 import { PluginBaseSettings, GridTradingSettings, PackSettings, UnpackSettings } from "./settings";
 import { GridTrading } from "./grid_trading";
+import { DebugLog } from "./remote_util";
 
+export const UPDATE_STOCK_SETTING = "update_stock_setting";
+export const FETCH_CURRENT_PRICE = "fetch_current_price";
+
+type Callback = () => void;
 
 export class PluginEnv
 {
@@ -14,6 +19,8 @@ export class PluginEnv
 
     grid_trading_dict: Map<string, GridTrading>;
     stock_remote_price_dict: Map<string, number>;
+    event_callback_dict: Map<string, Map<number, Callback>>
+    _event_guid: number;
 
     constructor()
     {
@@ -22,6 +29,8 @@ export class PluginEnv
         this.grid_settings = new GridTradingSettings();
         this.grid_trading_dict = new Map<string, GridTrading>;
         this.stock_remote_price_dict = new Map<string, number>;
+        this.event_callback_dict = new Map<string, Map<number, Callback>>;
+        this._event_guid = 0;
     }
 
     GetAPILisence(): string
@@ -68,5 +77,58 @@ export class PluginEnv
     SerializedSettings(): string
     {
         return PackSettings(this.base_settings) + PackSettings(this.grid_settings);
+    }
+
+    PublishEvent(event_name: string)
+    {
+        //DebugLog("PublishEvent: ", event_name);
+        const cb_dict = this.event_callback_dict.get(event_name)
+        if (cb_dict == undefined)
+        {
+            return;
+        }
+        for (let [guid, event_cb] of cb_dict)
+        {
+            try
+            {
+                //DebugLog("TriggerEventCb guid: ", guid, " cb: ", event_cb.name);
+                event_cb();
+            }
+            catch(e)
+            {
+                ;
+            }
+        }
+    }
+
+    SubscribeEvent(event_name: string, event_cb: Callback): number
+    {
+        const guid = this.GenGUID();
+        let cb_dict = this.event_callback_dict.get(event_name);
+        if (cb_dict == undefined)
+        {
+            cb_dict = new Map<number, Callback>;
+            this.event_callback_dict.set(event_name, cb_dict);
+        }
+        cb_dict.set(guid, event_cb);
+        //DebugLog("SubscribeEvent: ", event_name, " guid: ", guid, " cb: ", event_cb.name);
+        return guid;
+    }
+
+    UnsubscribeEvent(event_name: string, event_guid: number): boolean
+    {
+        const cb_dict = this.event_callback_dict.get(event_name)
+        if (cb_dict == undefined || !cb_dict.has(event_guid))
+        {
+            return false;
+        }
+        //DebugLog("UnsubscribeEvent: ", event_name, " guid: ", event_guid);
+        return cb_dict.delete(event_guid);
+    }
+
+    GenGUID(): number
+    {
+        this._event_guid++;
+        return this._event_guid;
     }
 }

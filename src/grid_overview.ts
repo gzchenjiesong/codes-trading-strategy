@@ -4,7 +4,7 @@
 import { TextFileView, WorkspaceLeaf, TFile, TFolder, Vault } from "obsidian";
 import { GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_TABLE_TITLE, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings";
 import { GridTrading } from "./grid_trading";
-import { PluginEnv } from "./plugin_env";
+import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
 import { ToPercent, ToTradingGap } from "./mymath";
 
 export const VIEW_TYPE_GTO = "gto-view"
@@ -14,6 +14,7 @@ export class GTOView extends TextFileView
     data: string;
     vault: Vault;
     plugin_env: PluginEnv;
+    refresh_event_guid: number;
 
     debug_log: string [][];
     stock_overview: string [][];
@@ -34,6 +35,7 @@ export class GTOView extends TextFileView
         super(leaf);
         this.vault = vault;
         this.plugin_env = plugin_env;
+        this.refresh_event_guid = -1;
 
         this.debug_log = [];
         this.stock_overview = [];
@@ -225,11 +227,19 @@ export class GTOView extends TextFileView
         div = this.contentEl.createEl("div")
         this.debug_log_title_el = div.createEl("h1");
         this.debug_log_table_el = div.createEl("table");
+
+        this.refresh_event_guid = this.plugin_env.SubscribeEvent(FETCH_CURRENT_PRICE, ()=>this.Refresh());
     }
 
     protected async onClose(): Promise<void>
     {
-        this.contentEl.empty();    
+        this.contentEl.empty();  
+        
+        if (this.refresh_event_guid > 0)
+        {
+            this.plugin_env.UnsubscribeEvent(FETCH_CURRENT_PRICE, this.refresh_event_guid);
+            this.refresh_event_guid = -1;
+        }
     }
 
     Refresh()

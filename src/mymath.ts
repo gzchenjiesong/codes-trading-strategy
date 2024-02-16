@@ -40,3 +40,8 @@ export function ToTradingGap(target_price: number|undefined, current_price: numb
         return "-" + ToPercent(gap / current_price, count);
     }
 }
+
+export function IsNumeric(str: string): boolean
+{
+    return !isNaN(Number(str));
+}

@@ -5,7 +5,6 @@
 
 import { TextFileView, WorkspaceLeaf, TFile, TFolder, Vault } from "obsidian";
 
-
 export const VIEW_TYPE_COR = "cor-view"
 
 export class CorView extends TextFileView

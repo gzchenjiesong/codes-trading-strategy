@@ -136,4 +136,50 @@ export class GridTradingSettings {
         clone.LGRID_RETAIN_COUNT = this.LGRID_RETAIN_COUNT;
         return clone;
     }
+
+    PackBase(): string
+    {
+        const setting = ["BASE", String(this.ONE_GRID_LIMIT), String(this.MAX_SLUMP_PCT), String(this.TRIGGER_ADD_POINT),
+                        String(this.MIN_ALIGN_PRICE), String(this.MIN_BATCH_COUNT), String(this.MAX_RISE_PCT)]
+        return setting.join(",");
+    }
+
+    UnpackBase(strs: string[])
+    {
+        if (strs.length != 7)
+        {
+            return;
+        }
+        this.ONE_GRID_LIMIT = Number(strs[1]);
+        this.MAX_SLUMP_PCT = Number(strs[2]);
+        this.TRIGGER_ADD_POINT = Number(strs[3]);
+        this.MIN_ALIGN_PRICE = Number(strs[4]);
+        this.MIN_BATCH_COUNT = Number(strs[5]);
+        this.MAX_RISE_PCT = Number(strs[6]);
+    }
+
+    PackStep(): string
+    {
+        const setting = ["STEP", String(this.SGRID_STEP_PCT), String(this.SGRID_ADD_PCT), String(this.SGRID_RETAIN_COUNT),
+                        String(this.MGRID_STEP_PCT), String(this.MGRID_ADD_PCT), String(this.MGRID_RETAIN_COUNT),
+                        String(this.LGRID_STEP_PCT), String(this.LGRID_ADD_PCT), String(this.LGRID_RETAIN_COUNT)]
+        return setting.join(",");
+    }
+
+    UnpackStep(strs: string[])
+    {
+        if (strs.length != 10)
+        {
+            return;
+        }
+        this.SGRID_STEP_PCT = Number(strs[1]);
+        this.SGRID_ADD_PCT = Number(strs[2]);
+        this.SGRID_RETAIN_COUNT = Number(strs[3]);
+        this.MGRID_STEP_PCT = Number(strs[4]);
+        this.MGRID_ADD_PCT = Number(strs[5]);
+        this.MGRID_RETAIN_COUNT = Number(strs[6]);
+        this.LGRID_STEP_PCT = Number(strs[7]);
+        this.LGRID_ADD_PCT = Number(strs[8]);
+        this.LGRID_RETAIN_COUNT = Number(strs[9]);
+    }
 }

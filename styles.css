@@ -20,6 +20,12 @@ table {
   }
   
   input {
-    background: none;
+    background: gainsboro;
     border: none;
+    font-size: medium;
+    margin-left: 4px;
+  }
+
+  textarea {
+    margin-left: 8px;
   }

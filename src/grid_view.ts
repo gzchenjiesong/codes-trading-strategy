@@ -5,8 +5,11 @@
 
 import { TextFileView, WorkspaceLeaf } from "obsidian";
 import { GridTrading } from "./grid_trading";
-import { PluginEnv } from "./plugin_env";
+import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
 import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_SELL_MONITOR, GRID_COLOR_SELL_TRIGGERED } from "./settings";
+import { DebugLog } from "./remote_util";
+import { ExcuteGridCommand } from "./command_util";
+
 
 export const VIEW_TYPE_GTV = "gtv-view"
 
@@ -14,6 +17,8 @@ export class GTVView extends TextFileView
 {
     data: string;
     plugin_env: PluginEnv;
+    refresh_event_guid: number;
+    view_guid: number;
 
     stock_tile_el: HTMLElement;
     stock_table_el: HTMLElement;
@@ -28,10 +33,17 @@ export class GTVView extends TextFileView
     debug_log_title_el: HTMLElement;
     debug_log_table_el: HTMLElement;
 
+    command_text_el: HTMLElement;
+    command_input_el: HTMLInputElement;
+    command_btn_el: HTMLElement;
+    command_list_el: HTMLElement;
+
     constructor(leaf: WorkspaceLeaf, plugin_env: PluginEnv)
     {
         super(leaf);
         this.plugin_env = plugin_env;
+        this.refresh_event_guid = -1;
+        this.view_guid = plugin_env.GenGUID();
     }
 
     getViewData(): string
@@ -58,6 +70,20 @@ export class GTVView extends TextFileView
     protected async onOpen(): Promise<void> 
     {
         let div = this.contentEl.createEl("div");
+        this.command_btn_el = div.createEl("button");
+        this.command_btn_el.setText("Excute");
+        this.command_btn_el.onClickEvent((ev: MouseEvent) => {this.OnClickAddRecordBtn(ev, this.command_input_el)});
+
+        this.command_input_el = div.createEl("input");
+        this.command_input_el.empty();
+        this.command_input_el.size = 70;
+        this.command_input_el.placeholder = "Input your command"
+
+        //div = this.contentEl.createEl("div");
+        //this.command_list_el = div.createEl("textarea");
+        //this.command_list_el.empty();
+
+        div = this.contentEl.createEl("div");
         this.stock_tile_el = div.createEl("h1");
         this.stock_table_el = div.createEl("table");
 
@@ -80,11 +106,62 @@ export class GTVView extends TextFileView
         div = this.contentEl.createEl("div")
         this.debug_log_title_el = div.createEl("h1");
         this.debug_log_table_el = div.createEl("table");
+
+        this.refresh_event_guid = this.plugin_env.SubscribeEvent(FETCH_CURRENT_PRICE, ()=>this.Refresh());
     }
 
+    OnClickAddRecordBtn(ev: MouseEvent, input_el: HTMLElement)
+    {
+        try
+        {
+            const text = input_el.value;
+            const grid_cmd = ExcuteGridCommand(text);
+            if (grid_cmd.error_code == 0)
+            {
+                if (grid_cmd.command == "add_record")
+                {
+                    this.data = this.data + grid_cmd.data_result_str;
+                    this.setViewData(this.data, false);
+                }
+                if (grid_cmd.command == "del_record")
+                {
+                    const lines = this.data.split("\n");
+                    let count = 0;
+                    let index = 0;
+                    for (index=0; index < lines.length; index++)
+                    {
+                        if (lines[index].startsWith("BUY,") || lines[index].startsWith("SELL,"))
+                        {
+                            count++;
+                        }
+                        if (count == grid_cmd.data_result_num)
+                        {
+                            break;
+                        }
+                    }
+                    if (index < lines.length)
+                    {
+                        lines.remove(lines[index]);
+                    }
+                    this.data = lines.join("\n");
+                    this.setViewData(this.data, false);
+                }
+            }
+        }
+        catch (e)
+        {
+            DebugLog("Command has error ", e)
+        }
+    }
+    
     protected async onClose(): Promise<void>
     {
-        this.contentEl.empty();    
+        this.contentEl.empty();
+        if (this.refresh_event_guid > 0)
+        {
+            this.plugin_env.UnsubscribeEvent(FETCH_CURRENT_PRICE, this.refresh_event_guid);
+            this.refresh_event_guid = -1;
+        }
     }
 
     Refresh()
