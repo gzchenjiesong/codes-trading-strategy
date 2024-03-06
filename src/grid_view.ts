@@ -79,10 +79,6 @@ export class GTVView extends TextFileView
         this.command_input_el.size = 70;
         this.command_input_el.placeholder = "Input your command"
 
-        //div = this.contentEl.createEl("div");
-        //this.command_list_el = div.createEl("textarea");
-        //this.command_list_el.empty();
-
         div = this.contentEl.createEl("div");
         this.stock_tile_el = div.createEl("h1");
         this.stock_table_el = div.createEl("table");

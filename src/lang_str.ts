@@ -21,3 +21,4 @@ export const SETTING_NAME = new Map<string, string>([
 export const SGRID_TYPE_NAME_STR = "小网";
 export const MGRID_TYPE_NAME_STR = "中网";
 export const LGRID_TYPE_NAME_STR = "大网";
+export const PERFIT_TYPE_NAME_STR = "利润";

@@ -3,9 +3,10 @@
 */
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
-import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR } from "./lang_str";
+import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR, PERFIT_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
 import { PluginEnv } from "./plugin_env";
+import { DebugLog } from "./remote_util";
 
 
 export class GridTrading 
@@ -27,6 +28,7 @@ export class GridTrading
     current_price: number;
     remote_current_price: number;
     target_price: number;
+    raw_trading_record: string [][];
     buy_grid_record: string [];
 
     buy_triggered_rows: number [];
@@ -68,7 +70,7 @@ export class GridTrading
             for (let idx=0; idx<this.buy_monitor_rows.length; idx++)
             {
                 const row = this.buy_monitor_rows[idx];
-                const trading_gap = ToTradingGap(Number(this.trading_table[row][3]), this.current_price, 2);
+                const trading_gap = ToTradingGap(this.current_price, Number(this.trading_table[row][3]), 2);
                 this.stock_buy_overview.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1],
                         this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], trading_gap]);
             }
@@ -79,7 +81,7 @@ export class GridTrading
             for (let idx=0; idx<this.sell_monitor_rows.length; idx++)
             {
                 const row = this.sell_monitor_rows[idx];
-                const trading_gap = ToTradingGap(Number(this.trading_table[row][7]), this.current_price, 2);
+                const trading_gap = ToTradingGap(this.current_price, Number(this.trading_table[row][7]), 2);
                 this.stock_sell_overview.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1],
                         this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], trading_gap]);
             }
@@ -94,6 +96,7 @@ export class GridTrading
             this.InitStockTable();
             this.InitGridParam();
             this.InitTradingTable();
+            this.InitTradingRecord();
             this.InitTradingAnalysis();
         }
     }
@@ -108,6 +111,7 @@ export class GridTrading
             this.InitStockTable();
             this.InitGridParam();
             this.InitTradingTable();
+            this.InitTradingRecord();
             this.InitTradingAnalysis();
             this.DebugLog("Info", "UpdateRemotePrice", String(this.remote_current_price));
         }
@@ -134,19 +138,19 @@ export class GridTrading
         // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
         // BUY,2024-01-23,小网0
         this.grid_settings = this.plugin_env.grid_settings.Clone();
-        this.trading_record = [];
+        this.raw_trading_record = [];
         this.buy_grid_record = [];
         for (let idx=1; idx < lines.length; idx++)
         {
             const strs = lines[idx].split(",");
             if (strs[0] == "BUY")
             {
-                this.trading_record[idx] = [strs[0], strs[1], strs[2]];
+                this.raw_trading_record.push([strs[0], strs[1], strs[2]]);
                 this.buy_grid_record.push(strs[2]);
             }
             if (strs[0] == "SELL")
             {
-                this.trading_record[idx] = [strs[0], strs[1], strs[2]];
+                this.raw_trading_record.push([strs[0], strs[1], strs[2]]);
                 this.buy_grid_record.remove(strs[2]);
             }
             if (strs[0] == "BASE")
@@ -168,10 +172,13 @@ export class GridTrading
 
     InitStockTable()
     {
+        const clear_price = this.target_price * (1.0 + this.grid_settings.SGRID_STEP_PCT);
         this.stock_table = [
             ["标的代号", String(this.target_stock)],
             ["标的名称", this.stock_name],
-            ["当前价格", String(this.current_price), "价格百分位", ToPercent(this.current_price / this.target_price, 1)],
+            ["当前价格", String(this.current_price)],
+            ["价格百分位", ToPercent(this.current_price / this.target_price, 1)],
+            ["清格所需涨幅", ToTradingGap(this.current_price, clear_price, 1)],
         ];
     }
 
@@ -378,6 +385,52 @@ export class GridTrading
         }
     }
 
+    InitTradingRecord()
+    {
+        let total_retain = 0;
+        this.trading_record = [];
+        for (let idx=0; idx<this.raw_trading_record.length; idx++)
+        {
+            this.trading_record.push([this.raw_trading_record[idx][0], this.raw_trading_record[idx][1], this.raw_trading_record[idx][2]]);
+            if (this.trading_record[idx][0] === "SELL")
+            {
+                // 记录买卖单格保留的份数
+                const row_idx = this.FindGridRowIndex(this.trading_record[idx][2]);
+                if (row_idx < 0)
+                {
+                    continue;
+                }
+                const retain_count = Number(this.trading_table[row_idx][4]) - Number(this.trading_table[row_idx][8]);
+                total_retain = total_retain + retain_count;
+                this.trading_record[idx].push(String(retain_count));
+            }
+        }
+        if (total_retain <= 0)
+        {
+            return;
+        }
+        this.trading_record.push(["TOTAL", "", "", String(total_retain)]);
+        const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
+        for (let index=1; index<=3; index++)
+        {
+            const row = this.GenerateClearRow(PERFIT_TYPE_NAME_STR, index, 0.35, MyFloor(total_retain / 3, 100));
+            this.trading_table.push(row);
+            if (current_pct + this.grid_settings.MAX_RISE_PCT >= ToNumber(row[1]))
+            {
+                this.sell_monitor_rows.push(this.trading_table.length - 1);
+            }
+            this.sell_triggered_rows.push(this.trading_table.length - 1);
+        }
+    }
+
+    GenerateClearRow(grid_name: string, idx: number, grid_step_pct: number, sell_count: number)
+    {
+        const price_step = MyFloor((1 + grid_step_pct) ** idx, 0.01);
+        const sell_price = MyCeil(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
+        return [grid_name + String(idx), ToPercent(price_step), "", "", "", "", (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3),
+                sell_price.toFixed(3), String(sell_count), String(Math.ceil(sell_price * sell_count)), "-", "+" + ToPercent(grid_step_pct)]
+    }
+
     GenerateOneRow(grid_name: string, idx: number, grid_step_pct: number, grid_retain_count: number, grid_add_pct: number)
     {
         //const price_step = MyFloor((100.0 - idx * grid_step_pct * 100.0) / 100.0, 0.01);
@@ -392,6 +445,18 @@ export class GridTrading
         return [grid_name + String(idx), ToPercent(price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), 
                 buy_price.toFixed(3), String(buy_count), String(Math.ceil(buy_price * buy_count)),
                 (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), sell_price.toFixed(3),
-                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(buy_price, sell_price, 1), ToTradingGap(sell_price, buy_price, 1)];
+                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1), ToTradingGap(buy_price, sell_price, 1)];
+    }
+
+    FindGridRowIndex(grid_name: string): number
+    {
+        for (let idx=0; idx<this.trading_table.length; idx++)
+        {
+            if (this.trading_table[idx][0] === grid_name)
+            {
+                return idx;
+            }
+        }
+        return -1;
     }
 }

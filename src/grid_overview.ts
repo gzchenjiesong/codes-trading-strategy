@@ -96,7 +96,7 @@ export class GTOView extends TextFileView
             {
                 if (strs.length > 4)
                 {
-                    const trading_gap = ToTradingGap(Number(strs[6]), stock_price_dict.get(strs[1]), 2);
+                    const trading_gap = ToTradingGap(stock_price_dict.get(strs[1]), Number(strs[6]), 2);
                     buy_table.push([GRID_COLOR_BUY_OVERVIEW, strs[1], strs[2], strs[3], strs[4], strs[5], strs[6], strs[7], strs[8], trading_gap]);
                 }
                 else
@@ -108,7 +108,7 @@ export class GTOView extends TextFileView
             {
                 if (strs[0] == "SELL")
                 {
-                    const trading_gap = ToTradingGap(Number(strs[6]), stock_price_dict.get(strs[1]), 2);
+                    const trading_gap = ToTradingGap(stock_price_dict.get(strs[1]), Number(strs[6]), 2);
                     sell_table.push([GRID_COLOR_SELL_OVERVIEW, strs[1], strs[2], strs[3], strs[4], strs[5], strs[6], strs[7], strs[8], trading_gap])
                 }
                 else

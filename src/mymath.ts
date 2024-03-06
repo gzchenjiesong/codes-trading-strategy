@@ -14,17 +14,20 @@ export function MyCeil(num: number, single: number)
     return Math.ceil(num / single) * single;
 }
 
+
 export function ToPercent(num: number, count = 0): string
 {
     return (num * 100).toFixed(count) + "%";
 }
+
 
 export function ToNumber(percent: string): number
 {
     return Number(percent.replace("%", "")) / 100.0;
 }
 
-export function ToTradingGap(target_price: number|undefined, current_price: number|undefined, count=0): string
+
+export function ToTradingGap(current_price: number|undefined, target_price: number|undefined, count=0): string
 {
     if (target_price == undefined || current_price == undefined || current_price == 0)
     {
@@ -40,6 +43,7 @@ export function ToTradingGap(target_price: number|undefined, current_price: numb
         return "-" + ToPercent(gap / current_price, count);
     }
 }
+
 
 export function IsNumeric(str: string): boolean
 {
