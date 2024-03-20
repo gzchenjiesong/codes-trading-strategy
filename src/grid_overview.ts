@@ -59,7 +59,7 @@ export class GTOView extends TextFileView
                 {
                     //this.DebugLog("Info", "file name" + String(index), grid_file.name);
                     const grid_trading = this.plugin_env.grid_trading_dict.get(grid_file.name);
-                    if (grid_trading instanceof GridTrading && grid_trading.is_empty == false)
+                    if (grid_trading instanceof GridTrading && grid_trading.IsStock())
                     {
                         //this.DebugLog("Info", "grid_trading info ", grid_trading.GetTradingTitle());
                         grid_trading.InitTradingOverview()

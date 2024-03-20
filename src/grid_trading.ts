@@ -60,6 +60,18 @@ export class GridTrading
         return this.stock_name + "(" + String(this.target_stock) + ")";
     }
 
+    IsStock(): boolean
+    {
+        if (this.is_empty == false && (this.market_code == "sz" || this.market_code == "sh"))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     InitTradingOverview()
     {
         this.stock_overview = [GRID_COLOR_STOCK_OVERVIEW, String(this.target_stock), this.stock_name, this.target_price.toFixed(3), this.current_price.toFixed(3),

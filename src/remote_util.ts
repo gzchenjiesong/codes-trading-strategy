@@ -25,6 +25,11 @@ async function FetchData(data_api: string, api_licence: string, debug_log: strin
 
 export async function GetETFCurrentPrice(etf_code: string, api_licence: string)
 {
+    if (!(etf_code.startsWith("sz") || etf_code.startsWith("sh")))
+    {
+        // 非sz/sh市场的ETF价格无法自动获取
+        return -1;
+    }
     const data_api = data_url_prefix + "/jj/etfhq/" + etf_code + "/" + api_licence;
     //DebugLog("request url: ", data_api);
     try
