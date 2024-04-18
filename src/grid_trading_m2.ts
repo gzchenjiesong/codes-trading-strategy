@@ -152,7 +152,6 @@ export class GridTradingModeTwo extends GridTrading
         {
             sell_price_step = Math.round(100 * Math.pow(1 - this.grid_settings.LGRID_STEP_PCT, i)) / 100;
             const step_pct = Math.round(100 * Math.pow(1 - this.grid_settings.LGRID_STEP_PCT, i + 1));
-            DebugLog("LGRID step pct ", step_pct, max_slump_pct);
             if (step_pct > max_slump_pct)
             {
                 this.trading_table[start_index + idx] = this.GenerateOneRow(LGRID_TYPE_NAME_STR, idx + 1, step_pct / 100, sell_price_step,
