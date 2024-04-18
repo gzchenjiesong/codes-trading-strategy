@@ -1,10 +1,11 @@
 /*
     网格策略的计算逻辑
+    基类，不负责网格的交易计算，封装统一的接口
 */
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
-import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR, PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
+import { PERFIT_TYPE_NAME_STR } from "./lang_str";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
 
@@ -21,6 +22,7 @@ export class GridTrading
     trading_analysis: string [][];
     trading_record: string [][];
     debug_log: string [][];
+    mode_type: string;
 
     target_stock: number;
     stock_name: string;
@@ -30,6 +32,9 @@ export class GridTrading
     target_price: number;
     raw_trading_record: string [][];
     buy_grid_record: string [];
+    sgrid_step_table: string [][];
+    mgrid_step_table: string [][];
+    lgrid_step_table: string [][];
 
     buy_triggered_rows: number [];
     sell_triggered_rows: number [];
@@ -50,12 +55,22 @@ export class GridTrading
         this.remote_current_price = -1;
     }
 
+    InitGridTrading(data: string)
+    {
+
+    }
+
+    UpdateRemotePrice(remote_price: number)
+    {
+
+    }
+
     DebugLog(level: string, log_str: string, extra_info: string)
     {
         this.debug_log.push([level, log_str, extra_info]);
     }
 
-    GetTradingTitle()
+    GetTradingTitle(): string
     {
         return this.stock_name + "(" + String(this.target_stock) + ")";
     }
@@ -100,35 +115,6 @@ export class GridTrading
         }
     }
 
-    InitGridTrading(data: string)
-    {
-        if (this.ParseRawData(data) || this.is_empty)
-        {
-            this.is_empty = false;
-            this.InitStockTable();
-            this.InitGridParam();
-            this.InitTradingTable();
-            this.InitTradingRecord();
-            this.InitTradingAnalysis();
-        }
-    }
-
-    UpdateRemotePrice(remote_price: number)
-    {
-        this.remote_current_price = remote_price;
-        if (this.remote_current_price > 0 && this.remote_current_price != this.current_price)
-        {
-            this.current_price = this.remote_current_price;
-            this.is_empty = false;
-            this.InitStockTable();
-            this.InitGridParam();
-            this.InitTradingTable();
-            this.InitTradingRecord();
-            this.InitTradingAnalysis();
-            this.DebugLog("Info", "UpdateRemotePrice", String(this.remote_current_price));
-        }
-    }
-
     ParseRawData(data: string): boolean
     {
         const new_md5 = Md5.hashStr(data);
@@ -140,11 +126,11 @@ export class GridTrading
         // 159869,游戏ETF,sz,1,0.95
         const lines = data.split("\n");
         const strs = lines[0].split(",");
-        this.target_stock = Number(strs[0]);
-        this.stock_name = strs[1];
-        this.market_code = strs[2];
-        this.target_price = Number(strs[3]);
-        this.current_price = Number(strs[4]);
+        this.target_stock = Number(strs[1]);
+        this.stock_name = strs[2];
+        this.market_code = strs[3];
+        this.target_price = Number(strs[4]);
+        this.current_price = Number(strs[5]);
 
         // BASE,10000,0.67,0.005,0.001,100,0.1
         // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
@@ -152,6 +138,9 @@ export class GridTrading
         this.grid_settings = this.plugin_env.grid_settings.Clone();
         this.raw_trading_record = [];
         this.buy_grid_record = [];
+        this.sgrid_step_table = [];
+        this.mgrid_step_table = [];
+        this.lgrid_step_table = [];
         for (let idx=1; idx < lines.length; idx++)
         {
             const strs = lines[idx].split(",");
@@ -173,6 +162,18 @@ export class GridTrading
             {
                 this.grid_settings.UnpackStep(strs);
             }
+            if (strs[0] == "SGRID")
+            {
+                this.sgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "MGRID")
+            {
+                this.mgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "LGRID")
+            {
+                this.lgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
         }
         this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[0]);
         if (this.remote_current_price > 0)
@@ -188,6 +189,7 @@ export class GridTrading
         this.stock_table = [
             ["标的代号", String(this.target_stock)],
             ["标的名称", this.stock_name],
+            ["网格模式", this.mode_type],
             ["当前价格", String(this.current_price)],
             ["价格百分位", ToPercent(this.current_price / this.target_price, 1)],
             ["清格所需涨幅", ToTradingGap(this.current_price, clear_price, 1)],
@@ -272,280 +274,56 @@ export class GridTrading
         }
     }
 
-    InitTradingTable()
-    {
-        this.buy_triggered_rows = []
-        this.sell_triggered_rows = []
-        this.buy_monitor_rows = []
-        this.sell_monitor_rows = []
-        this.trading_table = []
-        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
-
-        const scount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.SGRID_STEP_PCT);
-        const mcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.MGRID_STEP_PCT);
-        const lcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.LGRID_STEP_PCT);
-        const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
-        for (let idx=0; idx<=scount; idx++)
-        {
-            this.trading_table[idx + 1] = this.GenerateOneRow(SGRID_TYPE_NAME_STR, idx, this.grid_settings.SGRID_STEP_PCT,
-                    this.grid_settings.SGRID_RETAIN_COUNT, this.grid_settings.SGRID_ADD_PCT);
-            if (ToNumber(this.trading_table[idx + 1][1]) >= current_pct)
-            {
-                // 去掉根据价格标识买入的逻辑，纯按照历史记录来记录
-                //this.buy_triggered_rows.push(idx + 1);
-                //this.sell_triggered_rows.push(idx + 1);
-            }
-            //else
-            {
-                if (this.buy_grid_record.includes(this.trading_table[idx + 1][0]))
-                {
-                    this.buy_triggered_rows.push(idx + 1);
-                    this.sell_triggered_rows.push(idx + 1);
-                }
-            }
-        }
-        this.DebugLog("Info", "sgrid buy triggered rows length", String(this.buy_triggered_rows.length));
-        if (this.buy_triggered_rows.length > 0)
-        {
-            // 小网
-            const last_buy = this.buy_triggered_rows[this.buy_triggered_rows.length - 1];
-            if (last_buy < scount + 1) this.buy_monitor_rows.push(last_buy + 1);
-            let last_sell = this.sell_triggered_rows.pop();
-            if (last_sell) this.sell_monitor_rows.push(last_sell);
-            last_sell = this.sell_triggered_rows.pop();
-            if (last_sell) this.sell_monitor_rows.push(last_sell);
-        }
-        else
-        {
-            // 判断是否挂小网的首网买入
-            const first_buy = 1;
-            if (ToNumber(this.trading_table[first_buy][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-            {
-                this.buy_monitor_rows.push(first_buy);
-            }
-        }
-        for (let idx=1; idx<=mcount; idx++)
-        {
-            this.trading_table[scount + 1 + idx] = this.GenerateOneRow(MGRID_TYPE_NAME_STR, idx, this.grid_settings.MGRID_STEP_PCT,
-                    this.grid_settings.MGRID_RETAIN_COUNT, this.grid_settings.MGRID_ADD_PCT);
-            if (ToNumber(this.trading_table[scount + 1 + idx][1]) >= current_pct)
-            {
-                // 去掉根据价格标识买入的逻辑，纯按照历史记录来记录
-                //this.buy_triggered_rows.push(scount + 1 + idx);
-                //this.sell_triggered_rows.push(scount + 1 + idx);
-            }
-            //else
-            {
-                if (this.buy_grid_record.includes(this.trading_table[scount + 1 + idx][0]))
-                {
-                    this.buy_triggered_rows.push(scount + 1 + idx);
-                    this.sell_triggered_rows.push(scount + 1 + idx);
-                }
-                else
-                {
-                    // 判断是否挂中网买单监控
-                    if (ToNumber(this.trading_table[scount + 1 + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-                    {
-                        this.buy_monitor_rows.push(scount + 1 + idx);
-                    }
-                }
-            }
-        }
-        if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1)
-        {
-            // 判断是否挂卖单监控
-            const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_m][1]) + this.grid_settings.MGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
-            {
-                this.sell_triggered_rows.remove(last_sell_m);
-                this.sell_monitor_rows.push(last_sell_m);
-            }
-        }
-        for (let idx=1; idx<=lcount; idx++)
-        {
-            this.trading_table[scount + 1 + mcount + idx] = this.GenerateOneRow(LGRID_TYPE_NAME_STR, idx, this.grid_settings.LGRID_STEP_PCT,
-                    this.grid_settings.LGRID_RETAIN_COUNT, this.grid_settings.LGRID_ADD_PCT);
-            if (ToNumber(this.trading_table[scount + 1 + mcount + idx][1]) >= current_pct)
-            {
-                // 去掉根据价格标识买入的逻辑，纯按照历史记录来记录
-                //this.buy_triggered_rows.push(scount + 1 + mcount + idx);
-                //this.sell_triggered_rows.push(scount + 1 + mcount + idx);
-            }
-            //else
-            {
-                if (this.buy_grid_record.includes(this.trading_table[scount + 1 + mcount + idx][0]))
-                {
-                    this.buy_triggered_rows.push(scount + 1 + mcount + idx);
-                    this.sell_triggered_rows.push(scount + 1 + mcount + idx);
-                }
-                else
-                {
-                    // 判断是否挂大网买单监控
-                    if (ToNumber(this.trading_table[scount + 1 + mcount + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-                    {
-                        this.buy_monitor_rows.push(scount + 1 + mcount + idx);
-                    }
-                }
-            }
-        }
-        if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1 + mcount)
-        {
-            // 判断是否挂卖单监控
-            const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_l][1]) + this.grid_settings.LGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
-            {
-                this.sell_triggered_rows.remove(last_sell_l);
-                this.sell_monitor_rows.push(last_sell_l);
-            }
-        }
-    }
-
-    InitTradingTable2()
-    {
-        this.buy_triggered_rows = []
-        this.sell_triggered_rows = []
-        this.buy_monitor_rows = []
-        this.sell_monitor_rows = []
-        this.trading_table = []
-        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
-
-        const scount = Math.floor(0.4 / 0.05);
-        const mcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.MGRID_STEP_PCT);
-        const lcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.LGRID_STEP_PCT);
-        const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
-        let sell_price_step = 1 + 0.05;
-        for (let idx=0; idx<=scount; idx++)
-        {
-            const buy_price_step = (100 - idx * 0.05 * 100) / 100;
-            this.trading_table[idx + 1] = this.GenerateOneRow2(SGRID_TYPE_NAME_STR, idx, buy_price_step, sell_price_step,
-                    this.grid_settings.SGRID_RETAIN_COUNT, this.grid_settings.SGRID_ADD_PCT);
-            sell_price_step = buy_price_step;
-            if (this.buy_grid_record.includes(this.trading_table[idx + 1][0]))
-            {
-                this.buy_triggered_rows.push(idx + 1);
-                this.sell_triggered_rows.push(idx + 1);
-            }
-        }
-        if (this.buy_triggered_rows.length > 0)
-        {
-            // 小网
-            const last_buy = this.buy_triggered_rows[this.buy_triggered_rows.length - 1];
-            if (last_buy < scount + 1) this.buy_monitor_rows.push(last_buy + 1);
-            let last_sell = this.sell_triggered_rows.pop();
-            if (last_sell) this.sell_monitor_rows.push(last_sell);
-            last_sell = this.sell_triggered_rows.pop();
-            if (last_sell) this.sell_monitor_rows.push(last_sell);
-        }
-        else
-        {
-            // 判断是否挂小网的首网买入
-            const first_buy = 1;
-            if (ToNumber(this.trading_table[first_buy][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-            {
-                this.buy_monitor_rows.push(first_buy);
-            }
-        }
-        for (let idx=1; idx<=mcount; idx++)
-        {
-            this.trading_table[scount + 1 + idx] = this.GenerateOneRow(MGRID_TYPE_NAME_STR, idx, this.grid_settings.MGRID_STEP_PCT,
-                    this.grid_settings.MGRID_RETAIN_COUNT, this.grid_settings.MGRID_ADD_PCT);
-            if (ToNumber(this.trading_table[scount + 1 + idx][1]) >= current_pct)
-            {
-                // 去掉根据价格标识买入的逻辑，纯按照历史记录来记录
-                //this.buy_triggered_rows.push(scount + 1 + idx);
-                //this.sell_triggered_rows.push(scount + 1 + idx);
-            }
-            //else
-            {
-                if (this.buy_grid_record.includes(this.trading_table[scount + 1 + idx][0]))
-                {
-                    this.buy_triggered_rows.push(scount + 1 + idx);
-                    this.sell_triggered_rows.push(scount + 1 + idx);
-                }
-                else
-                {
-                    // 判断是否挂中网买单监控
-                    if (ToNumber(this.trading_table[scount + 1 + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-                    {
-                        this.buy_monitor_rows.push(scount + 1 + idx);
-                    }
-                }
-            }
-        }
-        if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1)
-        {
-            // 判断是否挂卖单监控
-            const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_m][1]) + this.grid_settings.MGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
-            {
-                this.sell_triggered_rows.remove(last_sell_m);
-                this.sell_monitor_rows.push(last_sell_m);
-            }
-        }
-        for (let idx=1; idx<=lcount; idx++)
-        {
-            this.trading_table[scount + 1 + mcount + idx] = this.GenerateOneRow(LGRID_TYPE_NAME_STR, idx, this.grid_settings.LGRID_STEP_PCT,
-                    this.grid_settings.LGRID_RETAIN_COUNT, this.grid_settings.LGRID_ADD_PCT);
-            if (ToNumber(this.trading_table[scount + 1 + mcount + idx][1]) >= current_pct)
-            {
-                // 去掉根据价格标识买入的逻辑，纯按照历史记录来记录
-                //this.buy_triggered_rows.push(scount + 1 + mcount + idx);
-                //this.sell_triggered_rows.push(scount + 1 + mcount + idx);
-            }
-            //else
-            {
-                if (this.buy_grid_record.includes(this.trading_table[scount + 1 + mcount + idx][0]))
-                {
-                    this.buy_triggered_rows.push(scount + 1 + mcount + idx);
-                    this.sell_triggered_rows.push(scount + 1 + mcount + idx);
-                }
-                else
-                {
-                    // 判断是否挂大网买单监控
-                    if (ToNumber(this.trading_table[scount + 1 + mcount + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
-                    {
-                        this.buy_monitor_rows.push(scount + 1 + mcount + idx);
-                    }
-                }
-            }
-        }
-        if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1 + mcount)
-        {
-            // 判断是否挂卖单监控
-            const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_l][1]) + this.grid_settings.LGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
-            {
-                this.sell_triggered_rows.remove(last_sell_l);
-                this.sell_monitor_rows.push(last_sell_l);
-            }
-        }
-    }
-
     InitTradingRecord()
     {
         let total_retain = 0;
-        this.trading_record = [];
-        for (let idx=0; idx<this.raw_trading_record.length; idx++)
+        this.trading_record = [["交易方向", "交易日期", "网格类型", "持仓时长", "保留份数"]];
+        let raw_record = [... this.raw_trading_record];
+        let cursor = 0;
+        while (cursor < raw_record.length)
         {
-            this.trading_record.push([this.raw_trading_record[idx][0], this.raw_trading_record[idx][1], this.raw_trading_record[idx][2]]);
-            if (this.trading_record[idx][0] === "SELL")
+            if (raw_record[cursor][0] == "BUY")
             {
-                // 记录买卖单格保留的份数
-                const row_idx = this.FindGridRowIndex(this.trading_record[idx][2]);
-                if (row_idx < 0)
+                let scursor = -1;
+                for (let idx=cursor; idx<raw_record.length; idx++)
                 {
-                    continue;
+                    if (raw_record[idx][0] == "SELL" && raw_record[idx][2] == raw_record[cursor][2])
+                    {
+                        scursor = idx;
+                        break;
+                    }
                 }
-                const retain_count = Number(this.trading_table[row_idx][4]) - Number(this.trading_table[row_idx][8]);
-                total_retain = total_retain + retain_count;
-                this.trading_record[idx].push(String(retain_count));
+                if (scursor >= 0)
+                {
+                    // 求持仓时间与保留份数
+                    const retain_count = this.GetGridRetainCount(raw_record[scursor][2]);
+                    total_retain = total_retain + retain_count;
+                    const time_d = TimeDuarion(raw_record[cursor][1], raw_record[scursor][1]);
+                    // 记录成对的买卖记录
+                    this.trading_record.push([raw_record[cursor][0], raw_record[cursor][1], raw_record[cursor][2]]);
+                    this.trading_record.push([raw_record[scursor][0], raw_record[scursor][1], raw_record[scursor][2], String(time_d)+"天", String(retain_count)]);
+                    raw_record.splice(cursor, 1);
+                    raw_record.splice(scursor - 1, 1);
+                }
+                else
+                {
+                    cursor++;
+                }
             }
+            else
+            {
+                cursor++;
+            }
+        }
+        for (let idx=0; idx<raw_record.length; idx++)
+        {
+            this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2]]);
         }
         if (total_retain <= 0)
         {
             return;
         }
-        this.trading_record.push(["TOTAL", "", "", String(total_retain)]);
+        this.trading_record.push(["TOTAL", "", "", "", String(total_retain)]);
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {
@@ -559,7 +337,7 @@ export class GridTrading
         }
     }
 
-    GenerateClearRow(grid_name: string, idx: number, grid_step_pct: number, sell_count: number)
+    GenerateClearRow(grid_name: string, idx: number, grid_step_pct: number, sell_count: number): string[]
     {
         const price_step = MyFloor((1 + grid_step_pct) ** idx, 0.01);
         const sell_price = MyCeil(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
@@ -567,47 +345,16 @@ export class GridTrading
                 sell_price.toFixed(3), String(sell_count), String(Math.ceil(sell_price * sell_count)), "-", "+" + ToPercent(grid_step_pct)]
     }
 
-    GenerateOneRow(grid_name: string, idx: number, grid_step_pct: number, grid_retain_count: number, grid_add_pct: number)
-    {
-        //const price_step = MyFloor((100.0 - idx * grid_step_pct * 100.0) / 100.0, 0.01);
-        const price_step = (100 - idx * grid_step_pct * 100) / 100;
-        const buy_price = MyFloor(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
-        const buy_count = MyFloor(this.grid_settings.ONE_GRID_LIMIT * (1 + idx * grid_add_pct) / buy_price, this.grid_settings.MIN_BATCH_COUNT)
-
-        const sell_price = MyCeil(this.target_price * (price_step + grid_step_pct), this.grid_settings.MIN_ALIGN_PRICE);
-        const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
-        const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
-
-        return [grid_name + String(idx), ToPercent(price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), 
-                buy_price.toFixed(3), String(buy_count), String(Math.ceil(buy_price * buy_count)),
-                (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), sell_price.toFixed(3),
-                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1), ToTradingGap(buy_price, sell_price, 1)];
-    }
-
-    GenerateOneRow2(grid_name: string, idx: number, buy_price_step: number, sell_price_step: number, grid_retain_count: number, grid_add_pct: number)
-    {
-        const buy_price = MyFloor(this.target_price * buy_price_step, this.grid_settings.MIN_ALIGN_PRICE);
-        const buy_count = MyFloor(this.grid_settings.ONE_GRID_LIMIT * (1 + idx * grid_add_pct) / buy_price, this.grid_settings.MIN_BATCH_COUNT)
-
-        const sell_price = MyCeil(this.target_price * sell_price_step, this.grid_settings.MIN_ALIGN_PRICE);
-        const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
-        const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
-
-        return [grid_name + String(idx), ToPercent(buy_price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), 
-                buy_price.toFixed(3), String(buy_count), String(Math.ceil(buy_price * buy_count)),
-                (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), sell_price.toFixed(3),
-                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1), ToTradingGap(buy_price, sell_price, 1)];
-    }
-
-    FindGridRowIndex(grid_name: string): number
+    GetGridRetainCount(grid_name: string): number
     {
         for (let idx=0; idx<this.trading_table.length; idx++)
         {
             if (this.trading_table[idx][0] === grid_name)
             {
-                return idx;
+                return Number(this.trading_table[idx][4]) - Number(this.trading_table[idx][8]);
             }
         }
-        return -1;
+        return 0;
     }
+
 }

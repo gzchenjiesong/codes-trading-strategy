@@ -178,7 +178,8 @@ export class GTVView extends TextFileView
 
         if (this.file != null)
         {
-            const grid_trading = this.plugin_env.GetAndGenGridTrading(this.file.name)
+            const mode_str = this.data.split("\n")[0].split(",")[0];
+            const grid_trading = this.plugin_env.GetAndGenGridTrading(this.file.name, mode_str);
             grid_trading.InitGridTrading(this.data);
             // 标的信息
             this.stock_tile_el.setText(grid_trading.stock_name);

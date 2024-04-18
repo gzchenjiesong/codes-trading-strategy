@@ -49,3 +49,13 @@ export function IsNumeric(str: string): boolean
 {
     return !isNaN(Number(str));
 }
+
+export function TimeDuarion(start_time: string, end_time: string): number
+{
+    // 时间用标准的字符串表示: YYYY-MM-DD, 每个月按照30天计算，非精确时间，时间跨度越大计算越不准
+    const stimes = start_time.split("-");
+    const etimes = end_time.split("-");
+    const ydiff = Number(etimes[0]) - Number(stimes[0])
+    const mdiff = Number(etimes[1]) + ydiff * 12 - Number(stimes[1])
+    return Number(etimes[2]) - Number(stimes[2]) + mdiff * 30
+}

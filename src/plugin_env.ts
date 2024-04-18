@@ -5,6 +5,9 @@
 import { PluginBaseSettings, GridTradingSettings, PackSettings, UnpackSettings } from "./settings";
 import { GridTrading } from "./grid_trading";
 import { DebugLog } from "./remote_util";
+import { GridTradingModeOne } from "./grid_trading_m1";
+import { GridTradingModeTwo } from "./grid_trading_m2";
+import { GridTradingModeThree } from "./grid_trading_m3";
 
 export const UPDATE_STOCK_SETTING = "update_stock_setting";
 export const FETCH_CURRENT_PRICE = "fetch_current_price";
@@ -51,14 +54,32 @@ export class PluginEnv
         }
     }
 
-    GetAndGenGridTrading(grid_name: string): GridTrading
+    GetGridTradingTypeByString(mode: string)
+    {
+        if (mode == "mode_two")
+        {
+            //DebugLog("GetGridTradingTypeByString return Two ", mode)
+            return GridTradingModeTwo;
+        }
+        if (mode == "mode_three")
+        {
+            //DebugLog("GetGridTradingTypeByString return Three ", mode)
+            return GridTradingModeThree;
+        }
+        // 默认使用模式1
+        //DebugLog("GetGridTradingTypeByString return One ", mode)
+        return GridTradingModeOne;
+    }
+
+    GetAndGenGridTrading(grid_name: string, mode: string)
     {
         let grid_trading = this.grid_trading_dict.get(grid_name)
-        if (grid_trading instanceof GridTrading)
+        const trading_mode = this.GetGridTradingTypeByString(mode)
+        if (grid_trading instanceof trading_mode)
         {
             return grid_trading;
         }
-        grid_trading = new GridTrading(this);
+        grid_trading = new trading_mode(this);
         this.grid_trading_dict.set(grid_name, grid_trading);
         return grid_trading;
     }

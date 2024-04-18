@@ -50,5 +50,5 @@ export function DebugLog(...args)
     args.forEach((cell, i) => {
         log_str = log_str + String(cell);
     });
-    new Notice(log_str);
+    new Notice(log_str, 0);
 }

@@ -84,6 +84,7 @@ export default class TradingStrategy extends Plugin
     async FetchAllStockCurrentPrice()
     {
         //DebugLog('run FetchAllStockCurrentPrice ', this.app.vault.getName());
+        const api_licence = this.plugin_env.GetAPILisence()
         const grid_folder = this.app.vault.getAbstractFileByPath('GridTrading');
         //DebugLog("getAbstractFileByPath ", String(grid_folder));
         if (grid_folder instanceof TFolder)
@@ -102,10 +103,12 @@ export default class TradingStrategy extends Plugin
                 {
                     //DebugLog("read file ", grid_file.name);
                     const content = await this.app.vault.cachedRead(grid_file);
-                    let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name);
+                    const mode_str = content.split("\n")[0].split(",")[0];
+                    let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
+                    //DebugLog("GetAndGenGridTrading, name: ", grid_file.name, ", mode: ", mode_str);
                     grid_trading.InitGridTrading(content);
                     //DebugLog("Try to fetch remote price, ", grid_trading.market_code, grid_trading.target_stock);
-                    let current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), "b192f53a6d6928033");
+                    let current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), api_licence);
                     // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
                     current_price = Number(current_price);
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
@@ -123,7 +126,7 @@ export default class TradingStrategy extends Plugin
                         const strs = lines[index].split(",");
                         if (strs[0] != "BUY" && strs[0] != "SELL")
                         {
-                            let current_price = await GetETFCurrentPrice(strs[2] + strs[0], "b192f53a6d6928033");
+                            let current_price = await GetETFCurrentPrice(strs[2] + strs[0], api_licence);
                             current_price = Number(current_price);
                             this.plugin_env.stock_remote_price_dict.set(strs[0], current_price);
                             //DebugLog("查询 ", strs[1], " 当前最新价格为: ", current_price);
