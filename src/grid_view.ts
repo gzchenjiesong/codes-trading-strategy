@@ -199,38 +199,42 @@ export class GTVView extends TextFileView
 
     DisplayTable(grid_trading: GridTrading, table_el: HTMLElement, table: string[][], is_color: boolean)
     {
-        const table_body = table_el.createEl("tbody");
-        table.forEach((row, i) => {
-            const table_row = table_body.createEl("tr");
-    
-            row.forEach((cell, j) => {
-                const table_cell = table_row.createEl("td", { text: cell, attr: {"align": "right"}});
-                if (is_color && i > 0)
-                {
-                    if (j <=5)
+        try {
+            const table_body = table_el.createEl("tbody");
+            table.forEach((row, i) => {
+                const table_row = table_body.createEl("tr");
+        
+                row.forEach((cell, j) => {
+                    const table_cell = table_row.createEl("td", { text: cell, attr: {"align": "right"}});
+                    if (is_color && i > 0)
                     {
-                        if (grid_trading.buy_triggered_rows.includes(i))
+                        if (j <=5)
                         {
-                            table_cell.setAttr("bgColor", GRID_COLOR_BUY_TRIGGERED);
+                            if (grid_trading.buy_triggered_rows.includes(i))
+                            {
+                                table_cell.setAttr("bgColor", GRID_COLOR_BUY_TRIGGERED);
+                            }
+                            if (grid_trading.buy_monitor_rows.includes(i))
+                            {
+                                table_cell.setAttr("bgColor", GRID_COLOR_BUY_MONITOR);
+                            }
                         }
-                        if (grid_trading.buy_monitor_rows.includes(i))
+                        else
                         {
-                            table_cell.setAttr("bgColor", GRID_COLOR_BUY_MONITOR);
+                            if (grid_trading.sell_triggered_rows.includes(i))
+                            {
+                                table_cell.setAttr("bgColor", GRID_COLOR_SELL_TRIGGERED);
+                            }
+                            if (grid_trading.sell_monitor_rows.includes(i))
+                            {
+                                table_cell.setAttr("bgColor", GRID_COLOR_SELL_MONITOR);
+                            }
                         }
                     }
-                    else
-                    {
-                        if (grid_trading.sell_triggered_rows.includes(i))
-                        {
-                            table_cell.setAttr("bgColor", GRID_COLOR_SELL_TRIGGERED);
-                        }
-                        if (grid_trading.sell_monitor_rows.includes(i))
-                        {
-                            table_cell.setAttr("bgColor", GRID_COLOR_SELL_MONITOR);
-                        }
-                    }
-                }
+                });
             });
-        });
+        } catch (error) {
+            DebugLog("DisplayTable error: ", error);
+        }
     }
 }

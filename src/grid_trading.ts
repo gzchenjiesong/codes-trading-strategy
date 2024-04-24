@@ -268,6 +268,7 @@ export class GridTrading
         const slump_pcts: number [] = [20, 40, 50, 60, 70, 80, 90];
         slump_pcts.push(this.grid_settings.MAX_SLUMP_PCT * 100)
         slump_pcts.sort((a, b) => a - b);
+        
         for (const pct of slump_pcts)
         {
             const result = Analysis(pct / 100.0);
@@ -282,7 +283,7 @@ export class GridTrading
     {
         let total_retain = 0;
         let total_cost = 0;
-        this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "占用本金", "持仓时长", "保留份数"]];
+        this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "占用本金", "保留份数", "持仓时长"]];
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
         while (cursor < raw_record.length)
@@ -300,15 +301,15 @@ export class GridTrading
                 }
                 if (scursor >= 0)
                 {
-                    // 求持仓时间与保留份数
-                    const retain_count = Number(raw_record[cursor][4]) - Number(raw_record[scursor][4]);
-                    const cost_count = Number(raw_record[cursor][3]) * Number(raw_record[cursor][4]) - Number(raw_record[scursor][3]) * Number(raw_record[scursor][4]);
+                    // 计算保留份数/占用本金/持仓时间
+                    const retain_count = Math.floor(Number(raw_record[cursor][4]) - Number(raw_record[scursor][4]));
+                    const cost_count = Math.floor(Number(raw_record[cursor][3]) * Number(raw_record[cursor][4]) - Number(raw_record[scursor][3]) * Number(raw_record[scursor][4]));
+                    const time_d = TimeDuarion(raw_record[cursor][1], raw_record[scursor][1]);
                     total_retain = total_retain + retain_count;
                     total_cost = total_cost + cost_count;
-                    const time_d = TimeDuarion(raw_record[cursor][1], raw_record[scursor][1]);
                     // 记录成对的买卖记录
                     this.trading_record.push([raw_record[cursor][0], raw_record[cursor][1], raw_record[cursor][2], raw_record[cursor][3], raw_record[cursor][4], String(cost_count)]);
-                    this.trading_record.push([raw_record[scursor][0], raw_record[scursor][1], raw_record[scursor][2], raw_record[scursor][3], raw_record[scursor][4], "--", String(time_d)+"天", String(retain_count)]);
+                    this.trading_record.push([raw_record[scursor][0], raw_record[scursor][1], raw_record[scursor][2], raw_record[scursor][3], raw_record[scursor][4], "--", String(retain_count), String(time_d)+"天"]);
                     raw_record.splice(cursor, 1);
                     raw_record.splice(scursor - 1, 1);
                 }
@@ -324,17 +325,17 @@ export class GridTrading
         }
         for (let idx=0; idx<raw_record.length; idx++)
         {
-            if (raw_record[cursor][0] == "BUY")
+            if (raw_record[idx][0] == "BUY")
             {
-                const cost_count = Number(raw_record[idx][3]) * Number(raw_record[idx][4]);
+                const cost_count = Math.floor(Number(raw_record[idx][3]) * Number(raw_record[idx][4]));
                 this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], String(cost_count)]);
                 total_cost = total_cost + cost_count;
             }
             else
             {
-                if (raw_record[cursor][0] == "SHARE")
+                if (raw_record[idx][0] == "SHARE")
                 {
-                    this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "--", "--", raw_record[idx][4]]);
+                    this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "--", raw_record[idx][4]]);
                     total_retain = total_retain + Number(raw_record[idx][4]);
                 }
                 else
@@ -343,15 +344,15 @@ export class GridTrading
                 }
             }
         }
-        if (total_cost > 0)
+        if (total_cost != 0)
         {
-            this.trading_record.push(["Cost", "", "", "", "", String(total_cost)]);
+            this.trading_record.push(["Cost", "", "", "", "", String(total_cost), "", ""]);
         }
-        if (total_retain <= 0)
+        if (total_retain  <= 0)
         {
             return;
         }
-        this.trading_record.push(["Retain", "", "", "", "", "", "", String(total_retain)]);
+        this.trading_record.push(["Retain", "", "", "", "", "", String(total_retain), ""]);
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {
