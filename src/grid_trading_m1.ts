@@ -71,7 +71,6 @@ export class GridTradingModeOne extends GridTrading
                 this.sell_triggered_rows.push(idx + 1);
             }
         }
-        this.DebugLog("Info", "sgrid buy triggered rows length", String(this.buy_triggered_rows.length));
         if (this.buy_triggered_rows.length > 0)
         {
             // 小网

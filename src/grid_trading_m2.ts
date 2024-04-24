@@ -2,7 +2,7 @@
     网格策略的计算逻辑，模式2
     模式1的基础上通过分段策略使得小网的步进值更加均衡
 */
-import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR, PERFIT_TYPE_NAME_STR } from "./lang_str";
+import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
