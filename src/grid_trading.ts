@@ -146,13 +146,17 @@ export class GridTrading
             const strs = lines[idx].split(",");
             if (strs[0] == "BUY")
             {
-                this.raw_trading_record.push([strs[0], strs[1], strs[2]]);
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
                 this.buy_grid_record.push(strs[2]);
             }
             if (strs[0] == "SELL")
             {
-                this.raw_trading_record.push([strs[0], strs[1], strs[2]]);
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
                 this.buy_grid_record.remove(strs[2]);
+            }
+            if (strs[0] == "SHARE")
+            {
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
             }
             if (strs[0] == "BASE")
             {
@@ -277,7 +281,8 @@ export class GridTrading
     InitTradingRecord()
     {
         let total_retain = 0;
-        this.trading_record = [["交易方向", "交易日期", "网格类型", "持仓时长", "保留份数"]];
+        let total_cost = 0;
+        this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "占用本金", "持仓时长", "保留份数"]];
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
         while (cursor < raw_record.length)
@@ -296,12 +301,14 @@ export class GridTrading
                 if (scursor >= 0)
                 {
                     // 求持仓时间与保留份数
-                    const retain_count = this.GetGridRetainCount(raw_record[scursor][2]);
+                    const retain_count = Number(raw_record[cursor][4]) - Number(raw_record[scursor][4]);
+                    const cost_count = Number(raw_record[cursor][3]) * Number(raw_record[cursor][4]) - Number(raw_record[scursor][3]) * Number(raw_record[scursor][4]);
                     total_retain = total_retain + retain_count;
+                    total_cost = total_cost + cost_count;
                     const time_d = TimeDuarion(raw_record[cursor][1], raw_record[scursor][1]);
                     // 记录成对的买卖记录
-                    this.trading_record.push([raw_record[cursor][0], raw_record[cursor][1], raw_record[cursor][2]]);
-                    this.trading_record.push([raw_record[scursor][0], raw_record[scursor][1], raw_record[scursor][2], String(time_d)+"天", String(retain_count)]);
+                    this.trading_record.push([raw_record[cursor][0], raw_record[cursor][1], raw_record[cursor][2], raw_record[cursor][3], raw_record[cursor][4], String(cost_count)]);
+                    this.trading_record.push([raw_record[scursor][0], raw_record[scursor][1], raw_record[scursor][2], raw_record[scursor][3], raw_record[scursor][4], "--", String(time_d)+"天", String(retain_count)]);
                     raw_record.splice(cursor, 1);
                     raw_record.splice(scursor - 1, 1);
                 }
@@ -317,13 +324,34 @@ export class GridTrading
         }
         for (let idx=0; idx<raw_record.length; idx++)
         {
-            this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2]]);
+            if (raw_record[cursor][0] == "BUY")
+            {
+                const cost_count = Number(raw_record[idx][3]) * Number(raw_record[idx][4]);
+                this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], String(cost_count)]);
+                total_cost = total_cost + cost_count;
+            }
+            else
+            {
+                if (raw_record[cursor][0] == "SHARE")
+                {
+                    this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "--", "--", raw_record[idx][4]]);
+                    total_retain = total_retain + Number(raw_record[idx][4]);
+                }
+                else
+                {
+                    this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4]]);
+                }
+            }
+        }
+        if (total_cost > 0)
+        {
+            this.trading_record.push(["Cost", "", "", "", "", String(total_cost)]);
         }
         if (total_retain <= 0)
         {
             return;
         }
-        this.trading_record.push(["TOTAL", "", "", "", String(total_retain)]);
+        this.trading_record.push(["Retain", "", "", "", "", "", "", String(total_retain)]);
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {

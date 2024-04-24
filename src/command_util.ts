@@ -2,6 +2,7 @@
     处理操作指令，负责解析内容并生成格式化结果
 */
 
+import { subscribe } from "diagnostics_channel";
 import { IsNumeric } from "./mymath";
 
 export class GridCommand
@@ -45,19 +46,19 @@ export function ExcuteGridCommand(cmd_str: string): GridCommand
 function AddGridRecord(command: GridCommand)
 {
     const sub_strs = command.command_param1.split(",");
-    if (sub_strs.length != 3)
+    if (sub_strs.length != 5)
     {
         command.error_code = -1;
         command.error_msg = "invalid param"
         return false;
     }
-    if (sub_strs[0] != "BUY" && sub_strs[0] != "SELL")
+    if (sub_strs[0] != "BUY" && sub_strs[0] != "SELL" && sub_strs[0] != "SHARE")
     {
         command.error_code = -1;
         command.error_msg = "invalid param"
         return false;
     }
-    if (!sub_strs[2].startsWith("小网") && !sub_strs[2].startsWith("中网") && !sub_strs[2].startsWith("大网"))
+    if (!sub_strs[2].startsWith("小网") && !sub_strs[2].startsWith("中网") && !sub_strs[2].startsWith("大网") && !sub_strs[2].startsWith("红利") && !sub_strs[2].startsWith("利润"))
     {
         command.error_code = -1;
         command.error_msg = "invalid param"

@@ -137,7 +137,7 @@ export class GTVView extends TextFileView
                     }
                     if (index < lines.length)
                     {
-                        lines.remove(lines[index]);
+                        lines.splice(index, 1);
                     }
                     this.data = lines.join("\n");
                     this.setViewData(this.data, false);
