@@ -265,10 +265,8 @@ export class GridTrading
             ["", "总浮盈比"],
         ];
 
-        const slump_pcts: number [] = [20, 40, 50, 60, 70, 80, 90];
-        slump_pcts.push(this.grid_settings.MAX_SLUMP_PCT * 100)
-        slump_pcts.sort((a, b) => a - b);
-        
+        const slump_pcts: number [] = [20, 30, 40, 50, 60, 70, 80];
+
         for (const pct of slump_pcts)
         {
             const result = Analysis(pct / 100.0);
@@ -283,6 +281,7 @@ export class GridTrading
     {
         let total_retain = 0;
         let total_cost = 0;
+        let total_hold = 0;
         this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "占用本金", "保留份数", "持仓时长"]];
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
@@ -323,6 +322,7 @@ export class GridTrading
                 cursor++;
             }
         }
+        total_hold = total_retain;
         for (let idx=0; idx<raw_record.length; idx++)
         {
             if (raw_record[idx][0] == "BUY")
@@ -330,6 +330,7 @@ export class GridTrading
                 const cost_count = Math.floor(Number(raw_record[idx][3]) * Number(raw_record[idx][4]));
                 this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], String(cost_count)]);
                 total_cost = total_cost + cost_count;
+                total_hold = total_hold + Number(raw_record[idx][4]);
             }
             else
             {
@@ -352,7 +353,7 @@ export class GridTrading
         {
             return;
         }
-        this.trading_record.push(["Retain", "", "", "", "", "", String(total_retain), ""]);
+        this.trading_record.push(["Retain", "", "", "", "", String(total_hold), String(total_retain), ""]);
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {
