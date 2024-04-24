@@ -322,7 +322,6 @@ export class GridTrading
                 cursor++;
             }
         }
-        total_hold = total_retain;
         for (let idx=0; idx<raw_record.length; idx++)
         {
             if (raw_record[idx][0] == "BUY")
@@ -336,8 +335,17 @@ export class GridTrading
             {
                 if (raw_record[idx][0] == "SHARE")
                 {
-                    this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "--", raw_record[idx][4]]);
-                    total_retain = total_retain + Number(raw_record[idx][4]);
+                    if (raw_record[idx][2] == "红利")
+                    {
+                        const gain_count = Math.floor(Number(raw_record[idx][3]) * Number(raw_record[idx][4]));
+                        this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "-" + String(gain_count)]);
+                        total_cost = total_cost - gain_count;
+                    }
+                    if (raw_record[idx][2] == "拆股")
+                    {
+                        this.trading_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4], "--", raw_record[idx][4]]);
+                        total_retain = total_retain + Number(raw_record[idx][4]);
+                    }
                 }
                 else
                 {
@@ -345,6 +353,7 @@ export class GridTrading
                 }
             }
         }
+        total_hold = total_hold + total_retain;
         if (total_cost != 0)
         {
             this.trading_record.push(["Cost", "", "", "", "", String(total_cost), "", ""]);
