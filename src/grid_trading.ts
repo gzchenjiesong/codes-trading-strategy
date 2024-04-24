@@ -353,7 +353,7 @@ export class GridTrading
         {
             return;
         }
-        this.trading_record.push(["Retain", "", "", "", "", String(total_hold), String(total_retain), ""]);
+        this.trading_record.push(["Retain", "", "", "", String(total_hold), "",  String(total_retain), ""]);
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {
