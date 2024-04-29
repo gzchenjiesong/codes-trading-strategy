@@ -26,6 +26,7 @@ export class GridTradingModeThree extends GridTrading
             this.InitGridParam();
             this.InitTradingTable();
             this.InitTradingRecord();
+            this.InitTradingIncome();
             this.InitTradingAnalysis();
         }
     }
@@ -41,8 +42,8 @@ export class GridTradingModeThree extends GridTrading
             this.InitGridParam();
             this.InitTradingTable();
             this.InitTradingRecord();
+            this.InitTradingIncome();
             this.InitTradingAnalysis();
-            this.DebugLog("Info", "UpdateRemotePrice", String(this.remote_current_price));
         }
     }
 

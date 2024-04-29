@@ -8,24 +8,20 @@ export function MyFloor(num: number, single: number)
     return Math.floor(num / single) * single;
 }
 
-
 export function MyCeil(num: number, single: number)
 {
     return Math.ceil(num / single) * single;
 }
-
 
 export function ToPercent(num: number, count = 0): string
 {
     return (num * 100).toFixed(count) + "%";
 }
 
-
 export function ToNumber(percent: string): number
 {
     return Number(percent.replace("%", "")) / 100.0;
 }
-
 
 export function ToTradingGap(current_price: number|undefined, target_price: number|undefined, count=0): string
 {
@@ -44,7 +40,6 @@ export function ToTradingGap(current_price: number|undefined, target_price: numb
     }
 }
 
-
 export function IsNumeric(str: string): boolean
 {
     return !isNaN(Number(str));
@@ -58,4 +53,9 @@ export function TimeDuarion(start_time: string, end_time: string): number
     const ydiff = Number(etimes[0]) - Number(stimes[0])
     const mdiff = Number(etimes[1]) + ydiff * 12 - Number(stimes[1])
     return Number(etimes[2]) - Number(stimes[2]) + mdiff * 30
+}
+
+export function AveragePrice(cost: number, count: number, single: number): number
+{
+    return MyCeil(cost / count, single);
 }

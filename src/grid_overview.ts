@@ -45,7 +45,7 @@ export class GTOView extends TextFileView
 
     ReadCustomStock()
     {
-        const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位"]];
+        const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "累积筹码"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         const grid_folder = this.vault.getAbstractFileByPath('GridTrading');
