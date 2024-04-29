@@ -157,7 +157,7 @@ export class GridTradingModeOne extends GridTrading
         const buy_price = MyFloor(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
         const buy_count = MyFloor(this.grid_settings.ONE_GRID_LIMIT * (1 + idx * grid_add_pct) / buy_price, this.grid_settings.MIN_BATCH_COUNT)
 
-        const sell_price = MyCeil(this.target_price * (price_step + grid_step_pct), this.grid_settings.MIN_ALIGN_PRICE);
+        const sell_price = MyFloor(this.target_price * (price_step + grid_step_pct), this.grid_settings.MIN_ALIGN_PRICE);
         const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
         const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
 
