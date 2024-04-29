@@ -384,16 +384,4 @@ export class GridTrading
                 sell_price.toFixed(3), String(sell_count), String(Math.ceil(sell_price * sell_count)), "-", "+" + ToPercent(grid_step_pct)]
     }
 
-    GetGridRetainCount(grid_name: string): number
-    {
-        for (let idx=0; idx<this.trading_table.length; idx++)
-        {
-            if (this.trading_table[idx][0] === grid_name)
-            {
-                return Number(this.trading_table[idx][4]) - Number(this.trading_table[idx][8]);
-            }
-        }
-        return 0;
-    }
-
 }
