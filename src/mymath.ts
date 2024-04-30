@@ -59,3 +59,8 @@ export function AveragePrice(cost: number, count: number, single: number): numbe
 {
     return MyCeil(cost / count, single);
 }
+
+export function StringPlus(num1: string, num2: string, single: number): string
+{
+    return String(MyFloor(Number(num1) + Number(num2), single));
+}

@@ -116,7 +116,7 @@ export class GridTradingModeTwo extends GridTrading
             while (step_pct > slump_pct && step_pct > max_slump_pct)
             {
                 this.trading_table[start_index + idx] = this.GenerateOneRow(MGRID_TYPE_NAME_STR, idx + 1, step_pct / 100, sell_price_step,
-                        this.grid_settings.MGRID_RETAIN_COUNT, this.grid_settings.LGRID_ADD_PCT);
+                        this.grid_settings.MGRID_RETAIN_COUNT, this.grid_settings.MGRID_ADD_PCT);
                 if (this.buy_grid_record.includes(this.trading_table[start_index + idx][0]))
                 {
                     this.buy_triggered_rows.push(start_index + idx);
