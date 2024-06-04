@@ -5,7 +5,7 @@
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePrice } from "./mymath";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePrice, FixedPrice } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
 
@@ -210,7 +210,7 @@ export class GridTrading
         this.param_table = [
             ["首网目标价", String(this.target_price), "首网目标金额", String(this.grid_settings.ONE_GRID_LIMIT)],
             ["最大回撤值", ToPercent(this.grid_settings.MAX_SLUMP_PCT), "最大涨跌幅", ToPercent(this.grid_settings.MAX_RISE_PCT)],
-            ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT), "每手份数额", String(this.grid_settings.MIN_BATCH_COUNT), "价格最小单位", String(this.grid_settings.MIN_ALIGN_PRICE)],
+            ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT), "每手份数额", String(this.grid_settings.MIN_BATCH_COUNT), "交易价精度", String(this.grid_settings.TRADING_PRICE_PRECISION)],
             ["小网步进值", ToPercent(this.grid_settings.SGRID_STEP_PCT), "中网步进值", ToPercent(this.grid_settings.MGRID_STEP_PCT), "大网步进值", ToPercent(this.grid_settings.LGRID_STEP_PCT)],
             ["投入追加值", ToPercent(this.grid_settings.SGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.MGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.LGRID_ADD_PCT)],
             ["保留利润数", String(this.grid_settings.SGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.MGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.LGRID_RETAIN_COUNT)],
@@ -419,30 +419,63 @@ export class GridTrading
         });
         this.trading_income.push(this.GenerateIncomeRow("最大回撤", max_count, max_cost, this.target_price * (1 - slump_pct), max_cost));
         this.trading_income.push(this.GenerateIncomeRow("反弹清格", empty_count, empty_cost, empty_price, this.total_cost));
-        const clear_price = MyFloor((this.CalcClearPrice(0.35, 1) + this.CalcClearPrice(0.35, 2) + this.CalcClearPrice(0.35, 3)) / 3, this.grid_settings.MIN_ALIGN_PRICE);
+        const clear_price = Number(((this.CalcClearPrice(0.35, 1) + this.CalcClearPrice(0.35, 2) + this.CalcClearPrice(0.35, 3)) / 3).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
         this.trading_income.push(this.GenerateIncomeRow("获利清盘", empty_count, empty_cost, clear_price, this.total_cost));
     }
 
     GenerateClearRow(grid_name: string, idx: number, grid_step_pct: number, sell_count: number): string[]
     {
-        const price_step = MyFloor((1 + grid_step_pct) ** idx, 0.01);
-        const sell_price = MyCeil(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
-        return [grid_name + String(idx), ToPercent(price_step), "", "", "", "", (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3),
-                sell_price.toFixed(3), String(sell_count), String(Math.ceil(sell_price * sell_count)), "-", "+" + ToPercent(grid_step_pct)]
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+        const price_step = Math.floor((100 + Math.floor(grid_step_pct * 100)) ** idx / 100 ** (idx -1)) / 100;
+        const sell_price = FixedPrice(this.target_price, price_step, precision);
+        return [grid_name + String(idx), ToPercent(price_step), "", "", "", "", (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision),
+                sell_price.toFixed(precision), String(sell_count), String(Math.ceil(sell_price * sell_count)), "-", "+" + ToPercent(grid_step_pct)]
     }
 
     GenerateIncomeRow(grid_name: string, total_count: number, total_cost: number, real_price: number, max_cost: number)
     {
         // ["", "持仓股数", "占用本金", "持仓均价", "实际金额", "实际价格", "持仓盈亏", "盈亏比例", "投入资金", "投入盈亏"]
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
         const real_cost = MyFloor(total_count * real_price, 1);
         const real_max = real_cost - total_cost + max_cost;
-        return [grid_name, String(total_count), String(total_cost), AveragePrice(total_cost, total_count, this.grid_settings.MIN_ALIGN_PRICE).toFixed(3),
-                String(real_cost), real_price.toFixed(3), String(real_cost - total_cost), ToTradingGap(total_cost, real_cost, 2), String(max_cost), ToTradingGap(max_cost, real_max, 2)];
+        return [grid_name, String(total_count), String(total_cost), (total_cost / total_count).toFixed(precision),
+                String(real_cost), real_price.toFixed(precision), String(real_cost - total_cost), ToTradingGap(total_cost, real_cost, 2), String(max_cost), ToTradingGap(max_cost, real_max, 2)];
     }
 
     CalcClearPrice(step_pct: number, step_idx: number)
     {
-        const price_step = MyFloor((1 + step_pct) ** step_idx, 0.01);
-        return MyCeil(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+        const price_step = Math.floor((100 + Math.floor(step_pct * 100)) ** step_idx / 100 ** (step_idx -1)) / 100;
+        return FixedPrice(this.target_price, price_step, precision);
+    }
+
+    IsNeedMonitor(table_index: number, is_sell: boolean, current_price: number, max_rise_pct: number): boolean
+    {
+        if (is_sell)
+        {
+            // 判断是否要挂卖出监控单
+            const sell_price = Number(this.trading_table[table_index][7]);
+            if (current_price * (1.0 + max_rise_pct) >= sell_price)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            // 判断是否要挂买入监控单
+            const buy_price = Number(this.trading_table[table_index][3]);
+            if (current_price * (1.0 - max_rise_pct) <= buy_price)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }

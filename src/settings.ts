@@ -74,7 +74,7 @@ export class GridTradingSettings {
     ONE_GRID_LIMIT: number;
     MAX_SLUMP_PCT: number;
     TRIGGER_ADD_POINT: number;
-    MIN_ALIGN_PRICE: number;
+    TRADING_PRICE_PRECISION: number;
     MIN_BATCH_COUNT: number;
     MAX_RISE_PCT: number;
 
@@ -96,9 +96,9 @@ export class GridTradingSettings {
         this.ONE_GRID_LIMIT = 10000;
         this.MAX_SLUMP_PCT = 0.67;
         this.TRIGGER_ADD_POINT = 0.005;
-        this.MIN_ALIGN_PRICE = 0.001;
+        this.TRADING_PRICE_PRECISION = 3;
         this.MIN_BATCH_COUNT = 100;
-        this.MAX_RISE_PCT = 0.1;
+        this.MAX_RISE_PCT = 0.15;
     
         this.SGRID_STEP_PCT = 0.05;
         this.SGRID_ADD_PCT = 0.05;
@@ -119,7 +119,7 @@ export class GridTradingSettings {
         clone.ONE_GRID_LIMIT = this.ONE_GRID_LIMIT;
         clone.MAX_SLUMP_PCT = this.MAX_SLUMP_PCT;
         clone.TRIGGER_ADD_POINT = this.TRIGGER_ADD_POINT;
-        clone.MIN_ALIGN_PRICE = this.MIN_ALIGN_PRICE;
+        clone.TRADING_PRICE_PRECISION = this.TRADING_PRICE_PRECISION;
         clone.MIN_BATCH_COUNT = this.MIN_BATCH_COUNT;
         clone.MAX_RISE_PCT = this.MAX_RISE_PCT;
     
@@ -140,7 +140,7 @@ export class GridTradingSettings {
     PackBase(): string
     {
         const setting = ["BASE", String(this.ONE_GRID_LIMIT), String(this.MAX_SLUMP_PCT), String(this.TRIGGER_ADD_POINT),
-                        String(this.MIN_ALIGN_PRICE), String(this.MIN_BATCH_COUNT), String(this.MAX_RISE_PCT)]
+                        String(this.TRADING_PRICE_PRECISION), String(this.MIN_BATCH_COUNT), String(this.MAX_RISE_PCT)]
         return setting.join(",");
     }
 
@@ -153,7 +153,7 @@ export class GridTradingSettings {
         this.ONE_GRID_LIMIT = Number(strs[1]);
         this.MAX_SLUMP_PCT = Number(strs[2]);
         this.TRIGGER_ADD_POINT = Number(strs[3]);
-        this.MIN_ALIGN_PRICE = Number(strs[4]);
+        this.TRADING_PRICE_PRECISION = Number(strs[4]);
         this.MIN_BATCH_COUNT = Number(strs[5]);
         this.MAX_RISE_PCT = Number(strs[6]);
     }

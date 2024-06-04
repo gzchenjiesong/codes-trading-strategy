@@ -2,6 +2,17 @@
     mymath: 网格定制数学库, 对原生的Math库进行封装，使得计算逻辑更加符合网格交易规则
 */
 
+export function FixedPrice(price: number, pct: number, precision: number)
+{
+    const scale = 10 ** precision;
+    return Math.floor(Math.floor(price * scale) * Math.floor(pct * 100) / 100) / scale;
+}
+
+export function AlignPrice(price: number, precision: number)
+{
+    const scale = 10 ** precision;
+    return Math.floor(price * scale) / scale;
+}
 
 export function MyFloor(num: number, single: number)
 {
@@ -16,6 +27,11 @@ export function MyCeil(num: number, single: number)
 export function ToPercent(num: number, count = 0): string
 {
     return (num * 100).toFixed(count) + "%";
+}
+
+export function ToPercentStr(num: number, count = 0): string
+{
+    return num.toFixed(count) + "%";
 }
 
 export function ToNumber(percent: string): number

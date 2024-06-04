@@ -3,7 +3,7 @@
     按照小中大不同的指定步进值
 */
 import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR, PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap } from "./mymath";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, FixedPrice, ToPercentStr } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
 import { GridTrading } from "./grid_trading";
@@ -60,7 +60,7 @@ export class GridTradingModeOne extends GridTrading
         const scount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.SGRID_STEP_PCT);
         const mcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.MGRID_STEP_PCT);
         const lcount = Math.floor(this.grid_settings.MAX_SLUMP_PCT / this.grid_settings.LGRID_STEP_PCT);
-        const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
+        const max_rise_pct = this.grid_settings.MAX_RISE_PCT;
         for (let idx=0; idx<=scount; idx++)
         {
             this.trading_table[idx + 1] = this.GenerateOneRow(SGRID_TYPE_NAME_STR, idx, this.grid_settings.SGRID_STEP_PCT,
@@ -79,14 +79,21 @@ export class GridTradingModeOne extends GridTrading
             if (last_buy < scount + 1) this.buy_monitor_rows.push(last_buy + 1);
             let last_sell = this.sell_triggered_rows.pop();
             if (last_sell) this.sell_monitor_rows.push(last_sell);
-            last_sell = this.sell_triggered_rows.pop();
-            if (last_sell) this.sell_monitor_rows.push(last_sell);
+            if (this.sell_triggered_rows.length > 0)
+            {
+                const last_sell_s = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
+                if (this.IsNeedMonitor(last_sell_s, true, this.current_price, max_rise_pct))
+                {
+                    this.sell_triggered_rows.pop();
+                    this.sell_monitor_rows.push(last_sell_s);
+                }
+            }
         }
         else
         {
             // 判断是否挂小网的首网买入
             const first_buy = 1;
-            if (ToNumber(this.trading_table[first_buy][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
+            if (this.IsNeedMonitor(first_buy, false, this.current_price, max_rise_pct))
             {
                 this.buy_monitor_rows.push(first_buy);
             }
@@ -104,7 +111,7 @@ export class GridTradingModeOne extends GridTrading
             else
             {
                 // 判断是否挂中网买单监控
-                if (ToNumber(this.trading_table[scount + 1 + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
+                if (this.IsNeedMonitor(scount + 1 + idx, false, this.current_price, max_rise_pct))
                 {
                     this.buy_monitor_rows.push(scount + 1 + idx);
                 }
@@ -114,7 +121,7 @@ export class GridTradingModeOne extends GridTrading
         {
             // 判断是否挂卖单监控
             const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_m][1]) + this.grid_settings.MGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
+            if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct))
             {
                 this.sell_triggered_rows.remove(last_sell_m);
                 this.sell_monitor_rows.push(last_sell_m);
@@ -133,7 +140,7 @@ export class GridTradingModeOne extends GridTrading
             else
             {
                 // 判断是否挂大网买单监控
-                if (ToNumber(this.trading_table[scount + 1 + mcount + idx][1]) + this.grid_settings.MAX_RISE_PCT >= current_pct)
+                if (this.IsNeedMonitor(scount + 1 + mcount, false, this.current_price, max_rise_pct))
                 {
                     this.buy_monitor_rows.push(scount + 1 + mcount + idx);
                 }
@@ -143,7 +150,7 @@ export class GridTradingModeOne extends GridTrading
         {
             // 判断是否挂卖单监控
             const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
-            if (ToNumber(this.trading_table[last_sell_l][1]) + this.grid_settings.LGRID_STEP_PCT - this.grid_settings.MAX_RISE_PCT <= current_pct)
+            if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct))
             {
                 this.sell_triggered_rows.remove(last_sell_l);
                 this.sell_monitor_rows.push(last_sell_l);
@@ -153,18 +160,20 @@ export class GridTradingModeOne extends GridTrading
 
     GenerateOneRow(grid_name: string, idx: number, grid_step_pct: number, grid_retain_count: number, grid_add_pct: number)
     {
-        // const price_step = MyFloor((100.0 - idx * grid_step_pct * 100.0) / 100.0, 0.01);
-        const price_step = (100 - idx * grid_step_pct * 100) / 100;
-        const buy_price = MyFloor(this.target_price * price_step, this.grid_settings.MIN_ALIGN_PRICE);
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+        const buy_price_step = 100 - idx * Math.floor(grid_step_pct * 100);
+        const buy_price = FixedPrice(this.target_price, buy_price_step / 100, precision);
         const buy_count = MyFloor(this.grid_settings.ONE_GRID_LIMIT * (1 + idx * grid_add_pct) / buy_price, this.grid_settings.MIN_BATCH_COUNT)
 
-        const sell_price = MyFloor(this.target_price * (price_step + grid_step_pct), this.grid_settings.MIN_ALIGN_PRICE);
+        const sell_price_step = buy_price_step + Math.floor(grid_step_pct * 100);
+        const sell_price = FixedPrice(this.target_price, sell_price_step / 100, precision);
         const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
         const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
 
-        return [grid_name + String(idx), ToPercent(price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), 
-                buy_price.toFixed(3), String(buy_count), String(Math.ceil(buy_price * buy_count)),
-                (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(3), sell_price.toFixed(3),
-                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1), ToTradingGap(buy_price, sell_price, 1)];
+        return [grid_name + String(idx), ToPercentStr(buy_price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), 
+                buy_price.toFixed(precision), String(buy_count), String(Math.ceil(buy_price * buy_count)),
+                (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), sell_price.toFixed(precision),
+                String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1),
+                ToTradingGap(buy_price, sell_price, 1)];
     }
 }
