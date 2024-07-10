@@ -49,6 +49,8 @@ export class GridTrading
     stock_overview: string [];
     stock_buy_overview: string [][];
     stock_sell_overview: string [][];
+    stock_passive_filled_record: string [][];
+    stock_active_filled_record: string [][];
 
     constructor(plugin_env: PluginEnv)
     {
@@ -117,6 +119,40 @@ export class GridTrading
                 const trading_gap = ToTradingGap(this.current_price, Number(this.trading_table[row][7]), 2);
                 this.stock_sell_overview.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1],
                         this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], trading_gap]);
+            }
+        }
+        if (this.stock_active_filled_record.length > 0)
+        {
+            // "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"
+            for (let idx=0; idx<this.stock_active_filled_record.length; idx++)
+            {
+                const row = this.stock_active_filled_record[idx];
+                row[8] = String(this.current_price);
+                row[9] = ToTradingGap(Number(row[5]), this.current_price);
+                row[10] = String(MyCeil(Number(row[7]) / this.current_price, this.grid_settings.MIN_BATCH_COUNT));
+                row[11] = String(Number(row[6]) - Number(row[10]));
+            }
+        }
+
+        if (this.stock_passive_filled_record.length > 0)
+        {
+            // "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"
+            for (let idx=0; idx<this.stock_passive_filled_record.length; idx++)
+            {
+                const row = this.stock_passive_filled_record[idx];
+                const grid_row = this.FindTradingGridRow(row[3]);
+                if (grid_row.length > 0)
+                {
+                    row[3] = grid_row[0];
+                    row[4] = grid_row[1];
+                    row[5] = grid_row[3];
+                    row[6] = grid_row[4];
+                    row[7] = grid_row[5];
+                    row[8] = String(this.current_price);
+                    row[9] = ToTradingGap(Number(row[5]), this.current_price);
+                    row[10] = grid_row[7];
+                    row[11] = ToTradingGap(this.current_price, Number(row[10]));
+                }
             }
         }
     }
@@ -288,6 +324,8 @@ export class GridTrading
         this.total_cost = 0;
         this.total_hold = 0;
         this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "消耗本金", "累积筹码", "持仓时长"]];
+        this.stock_passive_filled_record = [];
+        this.stock_active_filled_record = [];
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
         while (cursor < raw_record.length)
@@ -337,6 +375,14 @@ export class GridTrading
                 if (Number(raw_record[idx][3]) > 0)
                 {
                     this.total_hold = this.total_hold + Number(raw_record[idx][4]);
+                }
+                if (Number(raw_record[idx][3]) == 0)
+                {
+                    this.stock_passive_filled_record.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], "", "", "", "", "", "", "", ""])
+                }
+                if (raw_record[idx][2].startsWith("补仓"))
+                {
+                    this.stock_active_filled_record.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], raw_record[idx][1], raw_record[idx][3], raw_record[idx][4], String(cost_count), "", "", ""])
                 }
             }
             else
@@ -477,5 +523,17 @@ export class GridTrading
                 return false;
             }
         }
+    }
+
+    FindTradingGridRow(grid_name: string): string []
+    {
+        for (let idx=0; idx<this.trading_table.length; idx++)
+        {
+            if (this.trading_table[idx][0] == grid_name)
+            {
+                return this.trading_table[idx];
+            }
+        }
+        return [];
     }
 }

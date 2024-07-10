@@ -19,12 +19,15 @@ export class GTOView extends TextFileView
     debug_log: string [][];
     stock_overview: string [][];
     custom_stock_overview: string [][];
+    stock_filled_overview: string [][];
     income_overview: string [][];
 
     overview_title_el: HTMLElement;
     overview_table_el: HTMLElement;
     custom_title_el: HTMLElement;
     custom_table_el: HTMLElement;
+    filled_tile_el: HTMLElement;
+    filled_table_el: HTMLElement;
     income_title_el: HTMLElement;
     income_table_el: HTMLElement;
     debug_log_title_el: HTMLElement;
@@ -54,6 +57,8 @@ export class GTOView extends TextFileView
         const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "累积筹码"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
+        let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
+        let active_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"]];
         const grid_folder = this.vault.getAbstractFileByPath('GridTrading');
         if (grid_folder instanceof TFolder)
         {
@@ -69,6 +74,8 @@ export class GTOView extends TextFileView
                         stock_table.push(grid_trading.stock_overview);
                         buy_table = buy_table.concat(grid_trading.stock_buy_overview);
                         sell_table = sell_table.concat(grid_trading.stock_sell_overview);
+                        passive_table = passive_table.concat(grid_trading.stock_passive_filled_record);
+                        active_table = active_table.concat(grid_trading.stock_active_filled_record);
                         const trading_income = grid_trading.trading_income;
                         for (let idx=1; idx<=5; idx++)
                         {
@@ -87,6 +94,7 @@ export class GTOView extends TextFileView
             this.income_overview[idx][6] = ToTradingGap(Number(this.income_overview[idx][5]), Number(this.income_overview[idx][5]) + Number(this.income_overview[idx][3]), 2);
         }
         this.custom_stock_overview = [...stock_table, ...buy_table, ...sell_table];
+        this.stock_filled_overview = [...passive_table, ...active_table];
     }
 
     SumupAllStock()
@@ -166,6 +174,10 @@ export class GTOView extends TextFileView
         this.custom_title_el = div.createEl("h1");
         this.custom_table_el = div.createEl("table");
 
+        div = this.contentEl.createEl("div");
+        this.filled_tile_el = div.createEl("h1");
+        this.filled_table_el = div.createEl("table");
+
         div = this.contentEl.createEl("div")
         this.debug_log_title_el = div.createEl("h1");
         this.debug_log_table_el = div.createEl("table");
@@ -202,7 +214,12 @@ export class GTOView extends TextFileView
         this.custom_title_el.setText("我的网格");
         this.custom_table_el.empty();
         this.DisplayTable(this.custom_table_el, this.custom_stock_overview, true);
-    
+
+        // 补仓/加仓信息
+        this.filled_tile_el.setText("补仓信息");
+        this.filled_table_el.empty();
+        this.DisplayTable(this.filled_table_el, this.stock_filled_overview, true);
+
         // 调试信息
         this.debug_log_title_el.setText("调试日志");
         this.debug_log_table_el.empty();
