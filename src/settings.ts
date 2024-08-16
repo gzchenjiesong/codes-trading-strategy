@@ -6,14 +6,15 @@
 import { SETTING_NAME } from "./lang_str";
 
 // 颜色定义
-export const GRID_COLOR_BUY_MONITOR = "#FFFF00";    // 黄色
-export const GRID_COLOR_SELL_MONITOR = "#FFFF00";    // 黄色
-export const GRID_COLOR_BUY_TRIGGERED = "#D3D3D3";    // 灰色
-export const GRID_COLOR_SELL_TRIGGERED = "#FFFFE0";    // 浅黄
-export const GRID_COLOR_STOCK_OVERVIEW = "#FFFFFF"; // 同时肩负标记数据类型，估颜色值不能完全相等
-export const GRID_COLOR_TABLE_TITLE = "#D3D3D3";    // 同时肩负标记数据类型，估颜色值不能完全相等
-export const GRID_COLOR_BUY_OVERVIEW = "#FFFF01";   // 同时肩负标记数据类型，估颜色值不能完全相等
-export const GRID_COLOR_SELL_OVERVIEW = "#FFFF00";  // 同时肩负标记数据类型，估颜色值不能完全相等
+export const GRID_COLOR_BUY_MONITOR         = "#FFFF00";    // 黄色
+export const GRID_COLOR_SELL_MONITOR        = "#FFFF00";    // 黄色
+export const GRID_COLOR_BUY_TRIGGERED       = "#D3D3D3";    // 灰色
+export const GRID_COLOR_SELL_TRIGGERED      = "#FFFFE0";    // 浅黄
+export const GRID_COLOR_DISABLE             = "#FFFFE0";    // 深灰
+export const GRID_COLOR_STOCK_OVERVIEW      = "#FFFFFF";    // 同时肩负标记数据类型，估颜色值不能完全相等
+export const GRID_COLOR_TABLE_TITLE         = "#D3D3D3";    // 同时肩负标记数据类型，估颜色值不能完全相等
+export const GRID_COLOR_BUY_OVERVIEW        = "#FFFF01";    // 同时肩负标记数据类型，估颜色值不能完全相等
+export const GRID_COLOR_SELL_OVERVIEW       = "#FFFF00";    // 同时肩负标记数据类型，估颜色值不能完全相等
 
 
 export function PackSettings<T>(settings: T): string
@@ -77,6 +78,8 @@ export class GridTradingSettings {
     TRADING_PRICE_PRECISION: number;
     MIN_BATCH_COUNT: number;
     MAX_RISE_PCT: number;
+    MINIMUM_BUY_PCT: number;
+    CLEAR_STEP_PCT: number;
 
     SGRID_STEP_PCT: number;
     SGRID_ADD_PCT: number;
@@ -99,6 +102,8 @@ export class GridTradingSettings {
         this.TRADING_PRICE_PRECISION = 3;
         this.MIN_BATCH_COUNT = 100;
         this.MAX_RISE_PCT = 0.15;
+        this.MINIMUM_BUY_PCT = 0.01;
+        this.CLEAR_STEP_PCT = 0.25;
     
         this.SGRID_STEP_PCT = 0.05;
         this.SGRID_ADD_PCT = 0.05;
@@ -140,13 +145,14 @@ export class GridTradingSettings {
     PackBase(): string
     {
         const setting = ["BASE", String(this.ONE_GRID_LIMIT), String(this.MAX_SLUMP_PCT), String(this.TRIGGER_ADD_POINT),
-                        String(this.TRADING_PRICE_PRECISION), String(this.MIN_BATCH_COUNT), String(this.MAX_RISE_PCT)]
+                        String(this.TRADING_PRICE_PRECISION), String(this.MIN_BATCH_COUNT), String(this.MAX_RISE_PCT),
+                        String(this.CLEAR_STEP_PCT), String(this.MINIMUM_BUY_PCT)]
         return setting.join(",");
     }
 
     UnpackBase(strs: string[])
     {
-        if (strs.length != 7)
+        if (strs.length != 9)
         {
             return;
         }
@@ -156,6 +162,8 @@ export class GridTradingSettings {
         this.TRADING_PRICE_PRECISION = Number(strs[4]);
         this.MIN_BATCH_COUNT = Number(strs[5]);
         this.MAX_RISE_PCT = Number(strs[6]);
+        this.CLEAR_STEP_PCT = Number(strs[7]);
+        this.MINIMUM_BUY_PCT = Number(strs[8]);
     }
 
     PackStep(): string

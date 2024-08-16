@@ -4,7 +4,7 @@
 */
 import { App, Plugin, PluginSettingTab, PluginManifest, Setting, WorkspaceLeaf, TFile, TFolder } from 'obsidian';
 import { GridTradingSettings, PluginBaseSettings, SetSettingValue, GetSettingValue } from "./settings"
-import { GetETFCurrentPrice, DebugLog } from './remote_util';
+import { GetETFCurrentPrice, GetLOFCurrentPrice, DebugLog } from './remote_util';
 import { GTVView, VIEW_TYPE_GTV } from "./grid_view"
 import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
 import { CorView, VIEW_TYPE_COR } from './cor_view';
@@ -108,9 +108,18 @@ export default class TradingStrategy extends Plugin
                     //DebugLog("GetAndGenGridTrading, name: ", grid_file.name, ", mode: ", mode_str);
                     grid_trading.InitGridTrading(content);
                     //DebugLog("Try to fetch remote price, ", grid_trading.market_code, grid_trading.target_stock);
-                    let current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), api_licence);
-                    // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
-                    current_price = Number(current_price);
+                    let current_price = -1;
+                    if (grid_file.name.includes("LOF"))
+                    {
+                        current_price = await GetLOFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), api_licence);
+                        current_price = Number(current_price);
+                    }
+                    else
+                    {
+                        current_price = await GetETFCurrentPrice(grid_trading.market_code + String(grid_trading.target_stock), api_licence);
+                        // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
+                        current_price = Number(current_price);
+                    }
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
                     //DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);

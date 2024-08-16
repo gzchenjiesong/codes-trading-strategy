@@ -54,6 +54,7 @@ export class GridTradingModeTwo extends GridTrading
         this.sell_triggered_rows = []
         this.buy_monitor_rows = []
         this.sell_monitor_rows = []
+        this.disable_rows = []
         this.trading_table = []
         this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
 
@@ -77,6 +78,10 @@ export class GridTradingModeTwo extends GridTrading
                 {
                     this.buy_triggered_rows.push(idx + 1);
                     this.sell_triggered_rows.push(idx + 1);
+                }
+                if (this.IsDisableRow(idx + 1))
+                {
+                    this.disable_rows.push(idx + 1);
                 }
                 sell_price_step = step_pct / 100;
                 step_pct = Math.round(first_step * (1 - ti * this.grid_settings.SGRID_STEP_PCT));
@@ -124,6 +129,10 @@ export class GridTradingModeTwo extends GridTrading
             {
                 this.trading_table[start_index + idx] = this.GenerateOneRow(MGRID_TYPE_NAME_STR, idx + 1, step_pct / 100, sell_price_step,
                         this.grid_settings.MGRID_RETAIN_COUNT, this.grid_settings.MGRID_ADD_PCT);
+                if (this.IsDisableRow(start_index + idx))
+                {
+                    this.disable_rows.push(start_index + idx);
+                }
                 if (this.buy_grid_record.includes(this.trading_table[start_index + idx][0]))
                 {
                     this.buy_triggered_rows.push(start_index + idx);
@@ -164,6 +173,10 @@ export class GridTradingModeTwo extends GridTrading
             {
                 this.trading_table[start_index + idx] = this.GenerateOneRow(LGRID_TYPE_NAME_STR, idx + 1, step_pct / 100, sell_price_step,
                         this.grid_settings.LGRID_RETAIN_COUNT, this.grid_settings.LGRID_ADD_PCT);
+                if (this.IsDisableRow(start_index + idx))
+                {
+                    this.disable_rows.push(start_index + idx);
+                }
                 if (this.buy_grid_record.includes(this.trading_table[start_index + idx][0]))
                 {
                     this.buy_triggered_rows.push(start_index + idx);

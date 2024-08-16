@@ -9,6 +9,9 @@
         ETF基金行情
             API接口：https://api.biyingapi.com/jj/etfhq/ETF基金代码/您的licence
             备用接口：https://api1.biyingapi.com/jj/etfhq/ETF基金代码/您的licence
+        LOF基金行情
+            API接口：https://api.biyingapi.com/jj/lofhq/LOF基金代码/您的licence
+            备用接口：https://api1.biyingapi.com/jj/lofhq/LOF基金代码/您的licence
 */
 import { Notice, requestUrl } from "obsidian";
 
@@ -39,7 +42,28 @@ export async function GetETFCurrentPrice(etf_code: string, api_licence: string)
     }
     catch(e)
     {
-        DebugLog("request ", data_api, "error ", e.message);
+        DebugLog("request ", data_api, "  error ", e.message);
+        return -1;
+    }
+}
+
+export async function GetLOFCurrentPrice(lof_code: string, api_licence: string)
+{
+    if (!(lof_code.startsWith("sz") || lof_code.startsWith("sh")))
+    {
+        // 非sz/sh市场的LOF价格无法自动获取
+        return -1;
+    }
+    const data_api = data_url_prefix + "/jj/lofhq/" + lof_code + "/" + api_licence;
+    //DebugLog("request url: ", data_api);
+    try
+    {
+        const response = await requestUrl(data_api);
+        return response.json["zxj"];
+    }
+    catch(e)
+    {
+        DebugLog("request ", data_api, "  error ", e.message);
         return -1;
     }
 }

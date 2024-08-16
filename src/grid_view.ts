@@ -6,7 +6,7 @@
 import { TextFileView, WorkspaceLeaf } from "obsidian";
 import { GridTrading } from "./grid_trading";
 import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
-import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_SELL_MONITOR, GRID_COLOR_SELL_TRIGGERED } from "./settings";
+import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_DISABLE, GRID_COLOR_SELL_MONITOR, GRID_COLOR_SELL_TRIGGERED } from "./settings";
 import { DebugLog } from "./remote_util";
 import { ExcuteGridCommand } from "./command_util";
 
@@ -218,6 +218,10 @@ export class GTVView extends TextFileView
                     const table_cell = table_row.createEl("td", { text: cell, attr: {"align": "right"}});
                     if (is_color && i > 0)
                     {
+                        if (j == 0 && grid_trading.disable_rows.includes(i))
+                        {
+                            table_cell.setAttr("bgColor", GRID_COLOR_DISABLE);
+                        }
                         if (j <=5)
                         {
                             if (grid_trading.buy_triggered_rows.includes(i))

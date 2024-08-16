@@ -45,6 +45,7 @@ export class GridTrading
     sell_triggered_rows: number [];
     buy_monitor_rows: number [];
     sell_monitor_rows: number [];
+    disable_rows: number [];
 
     stock_overview: string [];
     stock_buy_overview: string [][];
@@ -230,7 +231,8 @@ export class GridTrading
 
     InitStockTable()
     {
-        const clear_price = this.target_price * (1.0 + this.grid_settings.SGRID_STEP_PCT);
+        const clear_price = FixedPrice(this.target_price, 1.0 + this.grid_settings.SGRID_STEP_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
+        const mini_price = FixedPrice(this.target_price, this.grid_settings.MINIMUM_BUY_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
         this.stock_table = [
             ["标的代号", String(this.target_stock)],
             ["标的名称", this.stock_name],
@@ -238,14 +240,16 @@ export class GridTrading
             ["当前价格", String(this.current_price)],
             ["价格百分位", ToPercent(this.current_price / this.target_price, 1)],
             ["清格所需涨幅", ToTradingGap(this.current_price, clear_price, 1)],
+            ["最低买入价", String(mini_price)],
+            ["停格剩余跌幅", ToTradingGap(this.current_price, mini_price)],
         ];
     }
 
     InitGridParam()
     {
         this.param_table = [
-            ["首网目标价", String(this.target_price), "首网目标金额", String(this.grid_settings.ONE_GRID_LIMIT)],
-            ["最大回撤值", ToPercent(this.grid_settings.MAX_SLUMP_PCT), "最大涨跌幅", ToPercent(this.grid_settings.MAX_RISE_PCT)],
+            ["首网目标价", String(this.target_price), "最低买入价", String(FixedPrice(this.target_price, this.grid_settings.MINIMUM_BUY_PCT, this.grid_settings.TRADING_PRICE_PRECISION)), "首网目标金额", String(this.grid_settings.ONE_GRID_LIMIT)],
+            ["最大回撤值", ToPercent(this.grid_settings.MAX_SLUMP_PCT), "最低买入位", ToPercent(this.grid_settings.MINIMUM_BUY_PCT), "最大涨跌幅", ToPercent(this.grid_settings.MAX_RISE_PCT)],
             ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT), "每手份数额", String(this.grid_settings.MIN_BATCH_COUNT), "交易价精度", String(this.grid_settings.TRADING_PRICE_PRECISION)],
             ["小网步进值", ToPercent(this.grid_settings.SGRID_STEP_PCT), "中网步进值", ToPercent(this.grid_settings.MGRID_STEP_PCT), "大网步进值", ToPercent(this.grid_settings.LGRID_STEP_PCT)],
             ["投入追加值", ToPercent(this.grid_settings.SGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.MGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.LGRID_ADD_PCT)],
@@ -421,7 +425,7 @@ export class GridTrading
         const current_pct = MyCeil(this.current_price / this.target_price, 0.001);
         for (let index=1; index<=3; index++)
         {
-            const row = this.GenerateClearRow(PERFIT_TYPE_NAME_STR, index, 0.35, MyFloor(this.total_retain / 3, 100));
+            const row = this.GenerateClearRow(PERFIT_TYPE_NAME_STR, index, this.grid_settings.CLEAR_STEP_PCT, MyFloor(this.total_retain / 3, 100));
             this.trading_table.push(row);
             if (current_pct + this.grid_settings.MAX_RISE_PCT >= ToNumber(row[1]))
             {
@@ -437,7 +441,8 @@ export class GridTrading
         this.trading_income.push(["", "持仓股数", "占用本金", "持仓均价", "实际金额", "实际价格", "持仓盈亏", "盈亏比例", "投入资金", "投入盈亏"]);
         this.trading_income.push(this.GenerateIncomeRow("当前持仓", this.total_hold, this.total_cost, this.current_price, this.total_cost));
         this.trading_income.push(this.GenerateIncomeRow("累积筹码", this.total_retain, this.retain_cost, this.current_price, this.retain_cost));
-        const slump_pct = this.grid_settings.MAX_SLUMP_PCT;
+        const minimum_pct = this.grid_settings.MINIMUM_BUY_PCT;
+        const clear_pct = this.grid_settings.CLEAR_STEP_PCT;
         let max_cost = this.total_cost;
         let max_count = this.total_hold;
         let empty_cost = this.total_cost;
@@ -456,16 +461,16 @@ export class GridTrading
             }
             else
             {
-                if (i > 0 && ToNumber(row[1]) >= 1.0 - slump_pct)
+                if (i > 0 && ToNumber(row[1]) >= minimum_pct)
                 {
                     max_cost = max_cost + Number(row[5]);
                     max_count = max_count + Number(row[4]);
                 }
             }
         });
-        this.trading_income.push(this.GenerateIncomeRow("最大回撤", max_count, max_cost, this.target_price * (1 - slump_pct), max_cost));
+        this.trading_income.push(this.GenerateIncomeRow("最大回撤", max_count, max_cost, this.target_price * minimum_pct, max_cost));
         this.trading_income.push(this.GenerateIncomeRow("反弹清格", empty_count, empty_cost, empty_price, this.total_cost));
-        const clear_price = Number(((this.CalcClearPrice(0.35, 1) + this.CalcClearPrice(0.35, 2) + this.CalcClearPrice(0.35, 3)) / 3).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
+        const clear_price = Number(((this.CalcClearPrice(clear_pct, 1) + this.CalcClearPrice(clear_pct, 2) + this.CalcClearPrice(clear_pct, 3)) / 3).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
         this.trading_income.push(this.GenerateIncomeRow("获利清盘", empty_count, empty_cost, clear_price, this.total_cost));
     }
 
@@ -514,6 +519,10 @@ export class GridTrading
         {
             // 判断是否要挂买入监控单
             const buy_price = Number(this.trading_table[table_index][3]);
+            if (buy_price < this.target_price * this.grid_settings.MINIMUM_BUY_PCT)
+            {
+                return false;
+            }
             if (current_price * (1.0 - max_rise_pct) <= buy_price)
             {
                 return true;
@@ -522,6 +531,19 @@ export class GridTrading
             {
                 return false;
             }
+        }
+    }
+
+    IsDisableRow(table_index: number)
+    {
+        const buy_price = Number(this.trading_table[table_index][3]);
+        if (buy_price < this.target_price * this.grid_settings.MINIMUM_BUY_PCT)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 

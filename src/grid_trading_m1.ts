@@ -54,6 +54,7 @@ export class GridTradingModeOne extends GridTrading
         this.sell_triggered_rows = []
         this.buy_monitor_rows = []
         this.sell_monitor_rows = []
+        this.disable_rows = []
         this.trading_table = []
         this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
 
@@ -70,6 +71,10 @@ export class GridTradingModeOne extends GridTrading
             {
                 this.buy_triggered_rows.push(idx + 1);
                 this.sell_triggered_rows.push(idx + 1);
+            }
+            if (this.IsDisableRow(idx + 1))
+            {
+                this.disable_rows.push(idx + 1);
             }
         }
         if (this.buy_triggered_rows.length > 0)
@@ -116,6 +121,10 @@ export class GridTradingModeOne extends GridTrading
                     this.buy_monitor_rows.push(scount + 1 + idx);
                 }
             }
+            if (this.IsDisableRow(scount + 1 + idx))
+            {
+                this.disable_rows.push(scount + 1 + idx);
+            }
         }
         if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1)
         {
@@ -144,6 +153,10 @@ export class GridTradingModeOne extends GridTrading
                 {
                     this.buy_monitor_rows.push(scount + 1 + mcount + idx);
                 }
+            }
+            if (this.IsDisableRow(scount + 1 + mcount + idx))
+            {
+                this.disable_rows.push(scount + 1 + mcount + idx);
             }
         }
         if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1 + mcount)
