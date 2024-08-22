@@ -218,10 +218,10 @@ export class GTVView extends TextFileView
                     const table_cell = table_row.createEl("td", { text: cell, attr: {"align": "right"}});
                     if (is_color && i > 0)
                     {
-                        if (j == 0 && grid_trading.disable_rows.includes(i))
-                        {
-                            table_cell.setAttr("bgColor", GRID_COLOR_DISABLE);
-                        }
+                        //if (j == 0 && grid_trading.disable_rows.includes(i))
+                        //{
+                        //    table_cell.setAttr("bgColor", GRID_COLOR_DISABLE);
+                        //}
                         if (j <=5)
                         {
                             if (grid_trading.buy_triggered_rows.includes(i))

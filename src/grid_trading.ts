@@ -489,7 +489,7 @@ export class GridTrading
         const precision = this.grid_settings.TRADING_PRICE_PRECISION;
         const real_cost = MyFloor(total_count * real_price, 1);
         const real_max = real_cost - total_cost + max_cost;
-        return [grid_name, String(total_count), String(total_cost), (total_cost / total_count).toFixed(precision),
+        return [grid_name, String(total_count), String(total_cost), (total_cost / Math.max(total_count, 1)).toFixed(precision),
                 String(real_cost), real_price.toFixed(precision), String(real_cost - total_cost), ToTradingGap(total_cost, real_cost, 2), String(max_cost), ToTradingGap(max_cost, real_max, 2)];
     }
 
@@ -536,8 +536,8 @@ export class GridTrading
 
     IsDisableRow(table_index: number)
     {
-        const buy_price = Number(this.trading_table[table_index][3]);
-        if (buy_price < this.target_price * this.grid_settings.MINIMUM_BUY_PCT)
+        const price_pct = ToNumber(this.trading_table[table_index][1]);
+        if (price_pct < this.grid_settings.MINIMUM_BUY_PCT)
         {
             return true;
         }
@@ -557,5 +557,50 @@ export class GridTrading
             }
         }
         return [];
+    }
+
+    SortTradingTable()
+    {
+        if (this.trading_table.length <= 1)
+        {
+            return;
+        }
+        this.trading_table.push(["停止线", "0%",]);
+        let move_idx = 0;
+        let move_row = null;
+        for (let idx=1; idx<this.trading_table.length; idx++)
+        {
+            if (this.trading_table[idx][1] == "0%")
+            {
+                break;
+            }
+            if (this.IsDisableRow(idx))
+            {
+                move_idx = idx;
+                move_row = this.trading_table[move_idx];
+                for (let idx2=move_idx; idx2<this.trading_table.length - 1; idx2++)
+                {
+                    this.trading_table[idx2] = this.trading_table[idx2 + 1];
+                    if (this.buy_monitor_rows.indexOf(idx2+1) != -1)
+                    {
+                        this.buy_monitor_rows[this.buy_monitor_rows.indexOf(idx2+1)] = idx2;
+                    }
+                    if (this.buy_triggered_rows.indexOf(idx2+1) != -1)
+                    {
+                        this.buy_triggered_rows[this.buy_triggered_rows.indexOf(idx2+1)] = idx2;
+                    }
+                    if (this.sell_monitor_rows.indexOf(idx2+1) != -1)
+                    {
+                        this.sell_monitor_rows[this.sell_monitor_rows.indexOf(idx2+1)] = idx2;
+                    }
+                    if (this.sell_triggered_rows.indexOf(idx2+1) != -1)
+                    {
+                        this.sell_triggered_rows[this.sell_triggered_rows.indexOf(idx2+1)] = idx2;
+                    }
+                }
+                this.trading_table[this.trading_table.length-1] = move_row;
+                idx--;
+            }
+        }
     }
 }

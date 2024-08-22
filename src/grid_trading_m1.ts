@@ -29,6 +29,7 @@ export class GridTradingModeOne extends GridTrading
             this.InitTradingRecord();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
+            this.SortTradingTable();
         }
     }
 
@@ -45,6 +46,7 @@ export class GridTradingModeOne extends GridTrading
             this.InitTradingRecord();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
+            this.SortTradingTable();
         }
     }
 
