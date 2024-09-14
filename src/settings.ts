@@ -190,4 +190,16 @@ export class GridTradingSettings {
         this.LGRID_ADD_PCT = Number(strs[8]);
         this.LGRID_RETAIN_COUNT = Number(strs[9]);
     }
+
+    PackQuant(): string
+    {
+        const setting = ["QUANT", ]
+
+        return setting.join(",")
+    }
+
+    UnpackQuant(strs: string [])
+    {
+
+    }
 }
