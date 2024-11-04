@@ -22,6 +22,7 @@ export class GridTrading
     trading_analysis: string [][];
     trading_record: string [][];
     trading_income: string [][];
+    stock_analysis: string [][];
     debug_log: string [][];
     mode_type: string;
 
@@ -32,6 +33,7 @@ export class GridTrading
     remote_current_price: number;
     target_price: number;
     raw_trading_record: string [][];
+    raw_stock_record: string [][];
     buy_grid_record: string [];
     sgrid_step_table: string [][];
     mgrid_step_table: string [][];

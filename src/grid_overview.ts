@@ -221,9 +221,9 @@ export class GTOView extends TextFileView
         this.DisplayTable(this.filled_table_el, this.stock_filled_overview, true);
 
         // 调试信息
-        this.debug_log_title_el.setText("调试日志");
-        this.debug_log_table_el.empty();
-        this.DisplayTable(this.debug_log_table_el, this.debug_log, false);
+        // this.debug_log_title_el.setText("调试日志");
+        // this.debug_log_table_el.empty();
+        // this.DisplayTable(this.debug_log_table_el, this.debug_log, false);
     }
 
     DisplayTable(table_el: HTMLElement, table: string[][], is_color: boolean)

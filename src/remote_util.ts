@@ -38,6 +38,7 @@ export async function GetETFCurrentPrice(etf_code: string, api_licence: string)
     try
     {
         const response = await requestUrl(data_api);
+        DebugLog("request ", etf_code, "  result ", response.json["zxj"]);
         return response.json["zxj"];
     }
     catch(e)
@@ -59,6 +60,7 @@ export async function GetLOFCurrentPrice(lof_code: string, api_licence: string)
     try
     {
         const response = await requestUrl(data_api);
+        DebugLog("request ", lof_code, "  result ", response.json["zxj"]);
         return response.json["zxj"];
     }
     catch(e)

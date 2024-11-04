@@ -181,8 +181,8 @@ export class GTVView extends TextFileView
         this.income_table_el.empty();
         this.analysis_title_el.setText("回撤分析");
         this.analysis_table_el.empty();
-        this.debug_log_title_el.setText("调试日志");
-        this.debug_log_table_el.empty();
+        // this.debug_log_title_el.setText("调试日志");
+        // this.debug_log_table_el.empty();
 
         if (this.file != null)
         {
@@ -203,7 +203,7 @@ export class GTVView extends TextFileView
             // 回撤分析
             this.DisplayTable(grid_trading, this.analysis_table_el, grid_trading.trading_analysis, false);
             // 调试信息
-            this.DisplayTable(grid_trading, this.debug_log_table_el, grid_trading.debug_log, false);
+            // this.DisplayTable(grid_trading, this.debug_log_table_el, grid_trading.debug_log, false);
         }
     }
 
