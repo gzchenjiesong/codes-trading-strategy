@@ -48,13 +48,18 @@ export class GTOView extends TextFileView
 
     ReadCustomStock()
     {
-        this.income_overview = [["", "占用本金", "实际金额", "持仓盈亏", "盈亏比例", "投入资金", "投入盈亏"]];
+        this.income_overview = [["", "占用本金", "实际金额", "持仓盈亏", "投入资金", "投入盈亏", "投入仓位"]];
+        this.income_overview.push(["累积筹码", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["当前持仓", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview.push(["累积筹码", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview.push(["最大回撤", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview.push(["反弹清格", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview.push(["获利清盘", "0", "0", "0", "0", "0", "0"]);
-        const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "累积筹码"]];
+        this.income_overview.push(["当前清格", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["当前清仓", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["回调持仓", "0", "0", "0", "0", "0", "0"]);
+        this.income_overview.push(["回调清格", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["回调清盘", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["最大持仓", "0", "0", "0", "0", "0", "0"]);
+        this.income_overview.push(["最大清格", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["最大清盘", "0", "0", "0", "0", "0", "-"]);
+        const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "回调仓位"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
@@ -68,7 +73,7 @@ export class GTOView extends TextFileView
                 if (grid_file instanceof TFile && grid_file.name.endsWith(".gtv"))
                 {
                     const grid_trading = this.plugin_env.grid_trading_dict.get(grid_file.name);
-                    if (grid_trading instanceof GridTrading && grid_trading.IsStock())
+                    if (grid_trading instanceof GridTrading && grid_trading.IsStock() && !grid_trading.is_debug)
                     {
                         grid_trading.InitTradingOverview()
                         stock_table.push(grid_trading.stock_overview);
@@ -77,21 +82,25 @@ export class GTOView extends TextFileView
                         passive_table = passive_table.concat(grid_trading.stock_passive_filled_record);
                         active_table = active_table.concat(grid_trading.stock_active_filled_record);
                         const trading_income = grid_trading.trading_income;
-                        for (let idx=1; idx<=5; idx++)
+                        for (let idx=1; idx<=10; idx++)
                         {
                             this.income_overview[idx][1] = StringPlus(this.income_overview[idx][1], trading_income[idx][2], 1);
-                            this.income_overview[idx][2] = StringPlus(this.income_overview[idx][2], trading_income[idx][4], 1);
+                            this.income_overview[idx][2] = StringPlus(this.income_overview[idx][2], trading_income[idx][5], 1);
                             this.income_overview[idx][3] = StringPlus(this.income_overview[idx][3], trading_income[idx][6], 1);
-                            this.income_overview[idx][5] = StringPlus(this.income_overview[idx][5], trading_income[idx][8], 1);
+                            this.income_overview[idx][4] = StringPlus(this.income_overview[idx][4], trading_income[idx][7], 1);
                         }
                     }
                 }
             }
         }
-        for (let idx=1; idx<=5; idx++)
+        let current_cost = Number(this.income_overview[2][1]);
+        for (let idx=1; idx<=10; idx++)
         {
-            this.income_overview[idx][4] = ToTradingGap(Number(this.income_overview[idx][1]), Number(this.income_overview[idx][2]), 2);
-            this.income_overview[idx][6] = ToTradingGap(Number(this.income_overview[idx][5]), Number(this.income_overview[idx][5]) + Number(this.income_overview[idx][3]), 2);
+            this.income_overview[idx][5] = ToPercent(Number(this.income_overview[idx][3]) / Number(this.income_overview[idx][4]), 2);
+            if (this.income_overview[idx][6] != "-")
+            {
+                this.income_overview[idx][6] = ToPercent(current_cost / Number(this.income_overview[idx][4]));
+            }
         }
         this.custom_stock_overview = [...stock_table, ...buy_table, ...sell_table];
         this.stock_filled_overview = [...passive_table, ...active_table];

@@ -26,7 +26,7 @@ async function FetchData(data_api: string, api_licence: string, debug_log: strin
     return response.json;
 }
 
-export async function GetETFCurrentPrice(etf_code: string, api_licence: string)
+export async function GetETFCurrentPrice(etf_code: string, api_licence: string, retry_count = 3)
 {
     if (!(etf_code.startsWith("sz") || etf_code.startsWith("sh")))
     {
@@ -35,20 +35,26 @@ export async function GetETFCurrentPrice(etf_code: string, api_licence: string)
     }
     const data_api = data_url_prefix + "/jj/etfhq/" + etf_code + "/" + api_licence;
     //DebugLog("request url: ", data_api);
-    try
+
+    while (retry_count >= 0)
     {
-        const response = await requestUrl(data_api);
-        DebugLog("request ", etf_code, "  result ", response.json["zxj"]);
-        return response.json["zxj"];
+        try
+        {
+            const response = await requestUrl(data_api);
+            DebugLog("request ", etf_code, "  result ", response.json["zxj"]);
+            return response.json["zxj"];
+        }
+        catch(e)
+        {
+            DebugLog("request ", data_api, "  error ", e.message);
+            await sleep(30 * 1000);
+        }
+        retry_count = retry_count - 1;
     }
-    catch(e)
-    {
-        DebugLog("request ", data_api, "  error ", e.message);
-        return -1;
-    }
+    return -1;
 }
 
-export async function GetLOFCurrentPrice(lof_code: string, api_licence: string)
+export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, retry_count = 3)
 {
     if (!(lof_code.startsWith("sz") || lof_code.startsWith("sh")))
     {
@@ -57,17 +63,21 @@ export async function GetLOFCurrentPrice(lof_code: string, api_licence: string)
     }
     const data_api = data_url_prefix + "/jj/lofhq/" + lof_code + "/" + api_licence;
     //DebugLog("request url: ", data_api);
-    try
+    while (retry_count >= 0)
     {
-        const response = await requestUrl(data_api);
-        DebugLog("request ", lof_code, "  result ", response.json["zxj"]);
-        return response.json["zxj"];
+        try
+        {
+            const response = await requestUrl(data_api);
+            DebugLog("request ", lof_code, "  result ", response.json["zxj"]);
+            return response.json["zxj"];
+        }
+        catch(e)
+        {
+            DebugLog("request ", data_api, "  error ", e.message);
+            await sleep(30 * 1000);
+        }
     }
-    catch(e)
-    {
-        DebugLog("request ", data_api, "  error ", e.message);
-        return -1;
-    }
+    return -1;
 }
 
 export function DebugLog(...args)
@@ -76,5 +86,5 @@ export function DebugLog(...args)
     args.forEach((cell, i) => {
         log_str = log_str + String(cell);
     });
-    new Notice(log_str, 0);
+    new Notice(log_str);
 }
