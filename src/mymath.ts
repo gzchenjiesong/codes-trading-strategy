@@ -61,14 +61,30 @@ export function IsNumeric(str: string): boolean
     return !isNaN(Number(str));
 }
 
-export function TimeDuarion(start_time: string, end_time: string): number
-{
-    // 时间用标准的字符串表示: YYYY-MM-DD, 每个月按照30天计算，非精确时间，时间跨度越大计算越不准
-    const stimes = start_time.split("-");
-    const etimes = end_time.split("-");
-    const ydiff = Number(etimes[0]) - Number(stimes[0])
-    const mdiff = Number(etimes[1]) + ydiff * 12 - Number(stimes[1])
-    return Number(etimes[2]) - Number(stimes[2]) + mdiff * 30
+export function TimeDuarion(dateStr1: string, dateStr2: string): number {
+    // 创建Date对象（自动转换为UTC时间）
+    const date1 = new Date(dateStr1);
+    const date2 = new Date(dateStr2);
+
+    // 验证日期有效性
+    if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+        throw new Error("输入的日期格式不正确");
+    }
+
+    // 计算UTC午夜时间戳差值（避免夏令时影响）
+    const utc1 = Date.UTC(
+        date1.getUTCFullYear(),
+        date1.getUTCMonth(),
+        date1.getUTCDate()
+    );
+    const utc2 = Date.UTC(
+        date2.getUTCFullYear(),
+        date2.getUTCMonth(),
+        date2.getUTCDate()
+    );
+
+    // 计算天数差并返回
+    return Math.abs(Math.floor((utc1 - utc2) / (1000 * 60 * 60 * 24)));
 }
 
 export function AveragePrice(cost: number, count: number, single: number): number

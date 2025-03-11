@@ -85,7 +85,8 @@ export class GridTradingModeThree extends GridTrading
             if (last_buy < this.sgrid_step_table.length) this.buy_monitor_rows.push(last_buy + 1);
             let last_sell = this.sell_triggered_rows.pop();
             if (last_sell) this.sell_monitor_rows.push(last_sell);
-            if (this.sell_triggered_rows.length > 0)
+            //if (this.sell_triggered_rows.length > 0)
+            if (false)
             {
                 const last_sell_s = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
                 if (this.IsNeedMonitor(last_sell_s, true, this.current_price, max_rise_pct))
