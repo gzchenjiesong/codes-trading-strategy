@@ -23,10 +23,11 @@ export class GridTradingModeTwo extends GridTrading
         if (this.ParseRawData(data) || this.is_empty)
         {
             this.is_empty = false;
-            this.InitStockTable();
             this.InitGridParam();
             this.InitTradingTable();
+            this.InitStockTable();
             this.InitTradingRecord();
+            this.InitHoldingAnalysis();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
             this.SortTradingTable();
@@ -40,10 +41,11 @@ export class GridTradingModeTwo extends GridTrading
         {
             this.current_price = this.remote_current_price;
             this.is_empty = false;
-            this.InitStockTable();
             this.InitGridParam();
             this.InitTradingTable();
+            this.InitStockTable();
             this.InitTradingRecord();
+            this.InitHoldingAnalysis();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
             this.SortTradingTable();

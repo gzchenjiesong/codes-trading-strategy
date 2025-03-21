@@ -87,12 +87,25 @@ export function TimeDuarion(dateStr1: string, dateStr2: string): number {
     return Math.abs(Math.floor((utc1 - utc2) / (1000 * 60 * 60 * 24)));
 }
 
-export function AveragePrice(cost: number, count: number, single: number): number
+export function AveragePriceStr(cost: number, count: number, single: number): string
 {
-    return MyCeil(cost / count, single);
+    if (count == 0)
+    {
+        return count.toFixed(single);
+    }
+    return String((cost / count).toFixed(single));
 }
 
 export function StringPlus(num1: string, num2: string, single: number): string
 {
     return String(MyFloor(Number(num1) + Number(num2), single));
+}
+
+export function ProportionPctStr(count: number, total: number, single: number): string
+{
+    if (total == 0)
+    {
+        return total.toFixed(single) + "%";
+    }
+    return String((count / total * 100).toFixed(single)) + "%";
 }

@@ -5,7 +5,7 @@
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePrice, FixedPrice } from "./mymath";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
 
@@ -23,6 +23,8 @@ export class GridTrading
     trading_analysis: string [][];
     trading_record: string [][];
     trading_income: string [][];
+    holding_analysis: string [][];
+    holding_record: string [][];
     stock_analysis: string [][];
     debug_log: string [][];
     mode_type: string;
@@ -33,6 +35,9 @@ export class GridTrading
     current_price: number;
     remote_current_price: number;
     target_price: number;
+    empty_price: number;
+    clear_price: number;
+    clear_avg_price: number;
     raw_trading_record: string [][];
     clear_sell_record: Map<string, number>;
     buy_grid_record: string [];
@@ -240,7 +245,19 @@ export class GridTrading
 
     InitStockTable()
     {
-        const empty_price = FixedPrice(this.target_price, 1.0 + this.grid_settings.SGRID_STEP_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
+        // 最高卖出价为清网价
+        this.empty_price = FixedPrice(this.target_price, 1.0 + this.grid_settings.SGRID_STEP_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
+        for (let idx=1; idx<this.trading_table.length; idx++)
+        {
+            if (Number(this.trading_table[idx][7]) > this.empty_price)
+            {
+                this.empty_price = Number(this.trading_table[idx][7]);
+            }
+        }
+        // 清仓平均价与清仓最高价
+        const clear_pct = this.grid_settings.CLEAR_STEP_PCT;
+        this.clear_avg_price = Number(((this.CalcClearPrice(clear_pct, 1) + this.CalcClearPrice(clear_pct, 2) + this.CalcClearPrice(clear_pct, 3)) / 3).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
+        this.clear_price = this.CalcClearPrice(clear_pct, 3);
         const mini_price = FixedPrice(this.target_price, this.grid_settings.MINIMUM_BUY_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
         const bottom_price = FixedPrice(this.target_price, this.grid_settings.BOTTOM_BUY_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
         this.stock_table = [
@@ -251,7 +268,7 @@ export class GridTrading
             ["当前价格", String(this.current_price), "价格百分位", ToPercent(this.current_price / this.target_price, 1)],
             ["回调价格", String(bottom_price), "价格百分位", ToPercent(this.grid_settings.BOTTOM_BUY_PCT, 1)],
             ["最低价格", String(mini_price), "价格百分位", ToPercent(this.grid_settings.MINIMUM_BUY_PCT, 1)],
-            ["停格跌幅", ToTradingGap(this.current_price, mini_price), "清格涨幅", ToTradingGap(this.current_price, empty_price, 1)],
+            ["停格跌幅", ToTradingGap(this.current_price, mini_price), "清格涨幅", ToTradingGap(this.current_price, this.empty_price, 1)],
         ];
     }
 
@@ -339,6 +356,7 @@ export class GridTrading
         this.trading_record = [["交易方向", "交易日期", "网格类型", "交易价格", "交易股数", "消耗本金", "累积筹码", "持仓时长"]];
         this.stock_passive_filled_record = [];
         this.stock_active_filled_record = [];
+        this.holding_record = [];
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
         let retain_sell = 0;
@@ -389,6 +407,7 @@ export class GridTrading
                 if (Number(raw_record[idx][3]) > 0)
                 {
                     this.total_hold = this.total_hold + Number(raw_record[idx][4]);
+                    this.holding_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4]]);
                 }
                 if (Number(raw_record[idx][3]) == 0)
                 {
@@ -463,23 +482,114 @@ export class GridTrading
 
     InitTradingIncome()
     {
-        let empty_price = Number(this.trading_table[1][7]);
-        this.stock_table[7][3] = ToTradingGap(this.current_price, empty_price, 1);
-
         this.trading_income = [];
-        //this.trading_income.push(["筹码分布", "持仓股数", "占用本金", "持仓金额", "持仓均价", "当前价格", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "持仓占比", "投入仓位"]);
         this.trading_income.push(["", "持仓股数", "占用本金", "持仓金额", "持仓均价", "实际价格", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "投入仓位"]);
         this.trading_income.push(this.GenerateIncomeRow("累计筹码", this.total_retain, this.retain_cost, this.current_price, this.retain_cost, 0, 0));
 
-        const clear_pct = this.grid_settings.CLEAR_STEP_PCT;
-        const clear_avg_price = Number(((this.CalcClearPrice(clear_pct, 1) + this.CalcClearPrice(clear_pct, 2) + this.CalcClearPrice(clear_pct, 3)) / 3).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
-        const clear_price = this.CalcClearPrice(clear_pct, 3);
         // 当前持仓
-        this.CalcTradingIncome("当前", this.current_price / this.target_price, empty_price, clear_avg_price, clear_price, false);
+        this.CalcTradingIncome("当前", this.current_price / this.target_price, this.empty_price, this.clear_avg_price, this.clear_price, false);
         // 短期回调
-        this.CalcTradingIncome("回调", this.grid_settings.BOTTOM_BUY_PCT, empty_price, clear_avg_price, clear_price);
+        this.CalcTradingIncome("回调", this.grid_settings.BOTTOM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price);
         // 最大回撤
-        this.CalcTradingIncome("最大", this.grid_settings.MINIMUM_BUY_PCT, empty_price, clear_avg_price, clear_price);
+        this.CalcTradingIncome("最大", this.grid_settings.MINIMUM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price);
+    }
+
+    InitHoldingAnalysis()
+    {
+        const total_hold = this.total_hold;
+        const total_cost = this.total_cost;
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+
+        this.holding_analysis = [];
+        this.holding_analysis.push(["筹码类型", "持仓股数", "占用本金", "持仓金额", "持仓均价", "当前价格", "持仓盈亏", "清格盈利", "清仓盈利", "持仓占比", "本金占比"]);
+        // 总额
+        this.holding_analysis.push(["总额",]);
+        // 小网
+        this.CalcHoldingPercent("小网", this.empty_price, this.clear_avg_price);
+        // 中网
+        this.CalcHoldingPercent("中网", this.empty_price, this.clear_avg_price);
+        // 大网
+        this.CalcHoldingPercent("大网", this.empty_price, this.clear_avg_price);
+        // 累积
+        let grid_total_hold = this.total_retain;
+        let grid_total_cost = this.retain_cost;
+        let grid_current_value = Math.floor(grid_total_hold * this.current_price);
+        let grid_empty_income = grid_total_hold * this.empty_price - grid_total_cost;
+        let grid_clear_income = grid_total_hold * this.clear_avg_price - grid_total_cost;
+        this.holding_analysis.push(["累积", String(grid_total_hold), String(grid_total_cost), String(grid_current_value),
+                AveragePriceStr(grid_total_cost, grid_total_hold, precision), this.current_price.toFixed(precision),
+                String(grid_current_value - grid_total_cost), grid_empty_income.toFixed(0), grid_clear_income.toFixed(0), 
+                ProportionPctStr(grid_total_hold, total_hold, 2), ProportionPctStr(grid_total_cost, total_cost, 2)]);
+        // 补仓
+        grid_total_hold = 0;
+        grid_total_cost = 0;
+        for (let idx=0; idx<this.holding_record.length; idx++)
+        {
+            if (this.holding_record[idx][2].startsWith("补仓"))
+            {
+                grid_total_hold += Number(this.holding_record[idx][4]);
+                grid_total_cost += Number(this.holding_record[idx][3]) * Number(this.holding_record[idx][4]);
+            }
+        }
+        grid_total_cost = Math.ceil(grid_total_cost);
+        grid_current_value = Math.floor(grid_total_hold * this.current_price);
+        grid_empty_income = grid_total_hold * this.empty_price - grid_total_cost;
+        grid_clear_income = grid_total_hold * this.clear_avg_price - grid_total_cost;
+        this.holding_analysis.push(["补仓", String(grid_total_hold), String(grid_total_cost), String(grid_current_value),
+                AveragePriceStr(grid_total_cost, grid_total_hold, precision), this.current_price.toFixed(precision),
+                String(grid_current_value - grid_total_cost), grid_empty_income.toFixed(0), grid_clear_income.toFixed(0), 
+                ProportionPctStr(grid_total_hold, total_hold, 2), ProportionPctStr(grid_total_cost, total_cost, 2)]);
+        // 总额
+        grid_total_hold = 0;
+        grid_total_cost = 0;
+        grid_current_value = 0;
+        grid_empty_income = 0;
+        grid_clear_income = 0;
+        for (let idx=2; idx<this.holding_analysis.length; idx++)
+        {
+            grid_total_hold += Number(this.holding_analysis[idx][1]);
+            grid_total_cost += Number(this.holding_analysis[idx][2]);
+            grid_current_value += Number(this.holding_analysis[idx][3]);
+            grid_empty_income += Number(this.holding_analysis[idx][7]);
+            grid_clear_income += Number(this.holding_analysis[idx][8]);
+        }
+        this.holding_analysis[1] = ["总额", String(grid_total_hold), String(grid_total_cost), String(grid_current_value),
+                AveragePriceStr(grid_total_cost, grid_total_hold, precision), this.current_price.toFixed(precision),
+                String(grid_current_value - grid_total_cost), grid_empty_income.toFixed(0), grid_clear_income.toFixed(0), 
+                ProportionPctStr(grid_total_hold, total_hold, 2), ProportionPctStr(grid_total_cost, total_cost, 2)];
+    }
+
+    CalcHoldingPercent(grid_type: string, empty_price: number, clear_avg_price: number)
+    {
+        const total_hold = this.total_hold;
+        const total_cost = this.total_cost;
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+        
+        let grid_total_hold = 0; // 持仓股数
+        let grid_total_cost = 0; // 占用本金
+        let grid_empty_income = 0; // 清格盈利
+        let grid_clear_income = 0; // 清仓盈利
+        for (let idx=0; idx<this.holding_record.length; idx++)
+        {
+            if (this.holding_record[idx][2].startsWith(grid_type))
+            {
+                const grid_hold = Number(this.holding_record[idx][4]);
+                const grid_cost = Number(this.holding_record[idx][3]) * Number(this.holding_record[idx][4]);
+                grid_total_hold += grid_hold;
+                grid_total_cost += grid_cost;
+                let grid_row = this.FindTradingGridRow(this.holding_record[idx][2]); // 7 8 9 "卖出价格", "卖出份数", "卖出金额"
+                const empty_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * empty_price - grid_cost;
+                grid_empty_income += empty_income;
+                const clear_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * clear_avg_price - grid_cost;
+                grid_clear_income += clear_income;
+            }
+        }
+        grid_total_cost = Math.ceil(grid_total_cost);
+        let grid_current_value = Math.floor(grid_total_hold * this.current_price);
+        this.holding_analysis.push([grid_type, String(grid_total_hold), String(grid_total_cost), String(grid_current_value),
+                AveragePriceStr(grid_total_cost, grid_total_hold, precision), this.current_price.toFixed(precision),
+                String(grid_current_value - grid_total_cost), grid_empty_income.toFixed(0), grid_clear_income.toFixed(0), 
+                ProportionPctStr(grid_total_hold, total_hold, 2), ProportionPctStr(grid_total_cost, total_cost, 2)]);
     }
 
     CalcTradingIncome(title_txt: string, slump_pct: number, empty_price: number, clear_avg_price: number, clear_price: number, need_slump: boolean = true)

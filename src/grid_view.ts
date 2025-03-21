@@ -26,12 +26,14 @@ export class GTVView extends TextFileView
     param_table_el: HTMLElement;
     trading_title_el: HTMLElement;
     trading_table_el: HTMLElement;
-    record_title_el: HTMLElement;
-    record_table_el: HTMLElement;
+    holding_title_el: HTMLElement;
+    holding_table_el: HTMLElement;
     income_title_el: HTMLElement;
     income_table_el: HTMLElement;
     analysis_title_el: HTMLElement;
     analysis_table_el: HTMLElement;
+    record_title_el: HTMLElement;
+    record_table_el: HTMLElement;
     debug_log_title_el: HTMLElement;
     debug_log_table_el: HTMLElement;
 
@@ -93,10 +95,10 @@ export class GTVView extends TextFileView
         this.trading_title_el = div.createEl("h1");
         this.trading_table_el = div.createEl("table");
 
-        div = this.contentEl.createEl("div");
-        this.record_title_el = div.createEl("h1");
-        this.record_table_el = div.createEl("table");
-  
+        div = this.contentEl.createEl("div")
+        this.holding_title_el = div.createEl("h1");
+        this.holding_table_el = div.createEl("table");
+
         div = this.contentEl.createEl("div");
         this.income_title_el = div.createEl("h1");
         this.income_table_el = div.createEl("table");
@@ -105,6 +107,10 @@ export class GTVView extends TextFileView
         this.analysis_title_el = div.createEl("h1");
         this.analysis_table_el = div.createEl("table")
 
+        div = this.contentEl.createEl("div");
+        this.record_title_el = div.createEl("h1");
+        this.record_table_el = div.createEl("table");
+  
         div = this.contentEl.createEl("div")
         this.debug_log_title_el = div.createEl("h1");
         this.debug_log_table_el = div.createEl("table");
@@ -175,12 +181,14 @@ export class GTVView extends TextFileView
         this.param_table_el.empty();
         this.trading_title_el.setText("交易网格");
         this.trading_table_el.empty();
-        this.record_title_el.setText("交易记录");
-        this.record_table_el.empty();
+        this.holding_title_el.setText("持仓分析");
+        this.holding_table_el.empty();
         this.income_title_el.setText("收益分析");
         this.income_table_el.empty();
         this.analysis_title_el.setText("回撤分析");
         this.analysis_table_el.empty();
+        this.record_title_el.setText("交易记录");
+        this.record_table_el.empty();
         // this.debug_log_title_el.setText("调试日志");
         // this.debug_log_table_el.empty();
 
@@ -196,12 +204,14 @@ export class GTVView extends TextFileView
             this.DisplayTable(grid_trading, this.param_table_el, grid_trading.param_table, false);
             // 交易网格
             this.DisplayTable(grid_trading, this.trading_table_el, grid_trading.trading_table, true);
-            // 交易记录
-            this.DisplayTable(grid_trading, this.record_table_el, grid_trading.trading_record, false);
+            // 持仓分析
+            this.DisplayTable(grid_trading, this.holding_table_el, grid_trading.holding_analysis, false);
             // 收益分析
             this.DisplayTable(grid_trading, this.income_table_el, grid_trading.trading_income, false);
             // 回撤分析
             this.DisplayTable(grid_trading, this.analysis_table_el, grid_trading.trading_analysis, false);
+            // 交易记录
+            this.DisplayTable(grid_trading, this.record_table_el, grid_trading.trading_record, false);
             // 调试信息
             // this.DisplayTable(grid_trading, this.debug_log_table_el, grid_trading.debug_log, false);
         }

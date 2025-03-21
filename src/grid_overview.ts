@@ -5,7 +5,7 @@ import { TextFileView, WorkspaceLeaf, TFile, TFolder, Vault } from "obsidian";
 import { GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_TABLE_TITLE, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings";
 import { GridTrading } from "./grid_trading";
 import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
-import { StringPlus, ToPercent, ToTradingGap } from "./mymath";
+import { StringPlus, ToPercent, ToTradingGap, ProportionPctStr } from "./mymath";
 
 export const VIEW_TYPE_GTO = "gto-view"
 
@@ -21,6 +21,7 @@ export class GTOView extends TextFileView
     custom_stock_overview: string [][];
     stock_filled_overview: string [][];
     income_overview: string [][];
+    holding_overview: string [][];
 
     overview_title_el: HTMLElement;
     overview_table_el: HTMLElement;
@@ -30,6 +31,8 @@ export class GTOView extends TextFileView
     filled_table_el: HTMLElement;
     income_title_el: HTMLElement;
     income_table_el: HTMLElement;
+    holding_title_el: HTMLElement;
+    holding_table_el: HTMLElement;
     debug_log_title_el: HTMLElement;
     debug_log_table_el: HTMLElement;
 
@@ -44,10 +47,18 @@ export class GTOView extends TextFileView
         this.stock_overview = [];
         this.custom_stock_overview = [];
         this.income_overview = [];
+        this.holding_overview = [];
     }
 
     ReadCustomStock()
     {
+        this.holding_overview = [["筹码类型", "占用本金", "持仓金额", "持仓盈亏", "清格盈利", "清仓盈利", "持仓占比", "本金占比"]]
+        this.holding_overview.push(["总额", "0", "0", "0", "0", "0", "0", "0"]);
+        this.holding_overview.push(["小网", "0", "0", "0", "0", "0", "0", "0"]);
+        this.holding_overview.push(["中网", "0", "0", "0", "0", "0", "0", "0"]);
+        this.holding_overview.push(["大网", "0", "0", "0", "0", "0", "0", "0"]);
+        this.holding_overview.push(["累积", "0", "0", "0", "0", "0", "0", "0"]);
+        this.holding_overview.push(["补仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview = [["", "占用本金", "持仓金额", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "投入仓位"]];
         this.income_overview.push(["累积筹码", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["当前持仓", "0", "0", "0", "0", "0", "0", "0"]);
@@ -98,9 +109,19 @@ export class GTOView extends TextFileView
                     this.income_overview[idx][4] = StringPlus(this.income_overview[idx][4], trading_income[idx][7], 1);
                     this.income_overview[idx][5] = StringPlus(this.income_overview[idx][5], trading_income[idx][8], 1);
                 }
+                const trading_holding = grid_trading.holding_analysis;
+                for (let idx=1; idx<=6; idx++)
+                {
+                    this.holding_overview[idx][1] = StringPlus(this.holding_overview[idx][1], trading_holding[idx][2], 1);
+                    this.holding_overview[idx][2] = StringPlus(this.holding_overview[idx][2], trading_holding[idx][3], 1);
+                    this.holding_overview[idx][3] = StringPlus(this.holding_overview[idx][3], trading_holding[idx][6], 1);
+                    this.holding_overview[idx][4] = StringPlus(this.holding_overview[idx][4], trading_holding[idx][7], 1);
+                    this.holding_overview[idx][5] = StringPlus(this.holding_overview[idx][5], trading_holding[idx][8], 1);
+                }
             }
         }
         let current_cost = Number(this.income_overview[2][1]);
+        let current_hold = Number(this.income_overview[2][2]);
         for (let idx=1; idx<=10; idx++)
         {
             this.income_overview[idx][6] = ToPercent(Number(this.income_overview[idx][3]) / Number(this.income_overview[idx][4]), 2);
@@ -108,6 +129,11 @@ export class GTOView extends TextFileView
             {
                 this.income_overview[idx][7] = ToPercent(current_cost / Number(this.income_overview[idx][4]));
             }
+        }
+        for (let idx=1; idx<=6; idx++)
+        {
+            this.holding_overview[idx][6] = ProportionPctStr(Number(this.holding_overview[idx][2]), current_hold, 2);
+            this.holding_overview[idx][7] = ProportionPctStr(Number(this.holding_overview[idx][1]), current_cost, 2);
         }
         this.custom_stock_overview = [...stock_table, ...buy_table, ...sell_table];
         this.stock_filled_overview = [...passive_table, ...active_table];
@@ -119,7 +145,12 @@ export class GTOView extends TextFileView
         let stock_count: number = 0;
         let buy_monitor_count: number = 0;
         let sell_monitor_count: number = 0;
-        let buy_cost_list: number [] = [];
+        let _3_buy_cost: number = 0;
+        let _5_buy_cost: number = 0;
+        let total_buy_cost: number = 0;
+        let _3_sell_gain: number = 0;
+        let _5_sell_gain: number = 0;
+        let total_sell_gain: number = 0;
 
         for(let idx=0; idx<this.custom_stock_overview.length; idx++)
         {
@@ -131,23 +162,34 @@ export class GTOView extends TextFileView
             if (stock[0] == GRID_COLOR_SELL_OVERVIEW)
             {
                 sell_monitor_count++;
+                total_sell_gain += Number(stock[8]);
+                const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
+                if (trading_gap < 3)
+                {
+                    _3_sell_gain += Number(stock[8]);
+                }
+                if (trading_gap < 5)
+                {
+                    _5_sell_gain += Number(stock[8]);
+                }
             }
             if (stock[0] == GRID_COLOR_BUY_OVERVIEW)
             {
-                if (stock.length > 4)
+                buy_monitor_count++;
+                total_buy_cost += Number(stock[8]);
+                const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
+                if ( trading_gap > -3)
                 {
-                    buy_monitor_count++;
-                    buy_cost_list.push(Number(stock[8]));
+                    _3_buy_cost += Number(stock[8]);
+                }
+                if (trading_gap > -5)
+                {
+                    _5_buy_cost += Number(stock[8]);
                 }
             }
         }
-        let total_cost = 0;
-        let top5_cost = 0;
-        buy_cost_list.sort((a, b) => b - a);
-        buy_cost_list.forEach((val, idx) => total_cost = total_cost + val);
-        buy_cost_list.forEach((val, idx) => {if (idx < 5) top5_cost = top5_cost + val});
-        this.stock_overview.push(["标的总数", "卖出监控格数", "买入监控格数", "买入单成交总额", "TOP5买入成交总额"]);
-        this.stock_overview.push([String(stock_count), String(sell_monitor_count), String(buy_monitor_count), String(total_cost), String(top5_cost)]);
+        this.stock_overview.push(["标的总数", "卖出监控", "买入监控", "买入总额", "-3%内买入总额", "-5%内买入总额", "+3%内卖出总额", "+5%内卖出总额"]);
+        this.stock_overview.push([String(stock_count), String(sell_monitor_count), String(buy_monitor_count), String(total_buy_cost), String(_3_buy_cost), String(_5_buy_cost), String(_3_sell_gain), String(_5_sell_gain)]);
     }
 
     DebugLog(level: string, log_str: string, extra_info: string)
@@ -181,6 +223,10 @@ export class GTOView extends TextFileView
         let div = this.contentEl.createEl("div");
         this.overview_title_el = div.createEl("h1");
         this.overview_table_el = div.createEl("table");
+
+        div = this.contentEl.createEl("div");
+        this.holding_title_el = div.createEl("h1");
+        this.holding_table_el = div.createEl("table");
 
         div = this.contentEl.createEl("div");
         this.income_title_el = div.createEl("h1");
@@ -220,7 +266,12 @@ export class GTOView extends TextFileView
         this.overview_title_el.setText("网格总览");
         this.overview_table_el.empty();
         this.DisplayTable(this.overview_table_el, this.stock_overview, false);
-    
+
+        // 持仓分析
+        this.holding_title_el.setText("持仓分析");
+        this.holding_table_el.empty();
+        this.DisplayTable(this.holding_table_el, this.holding_overview, false);
+
         // 盈亏总览
         this.income_title_el.setText("盈亏总览");
         this.income_table_el.empty();
