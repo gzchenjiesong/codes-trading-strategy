@@ -34,6 +34,8 @@ export class GTVView extends TextFileView
     analysis_table_el: HTMLElement;
     record_title_el: HTMLElement;
     record_table_el: HTMLElement;
+    adjust_title_el: HTMLElement;
+    adjust_table_el: HTMLElement;
     debug_log_title_el: HTMLElement;
     debug_log_table_el: HTMLElement;
 
@@ -111,6 +113,10 @@ export class GTVView extends TextFileView
         this.record_title_el = div.createEl("h1");
         this.record_table_el = div.createEl("table");
   
+        div = this.contentEl.createEl("div");
+        this.adjust_title_el = div.createEl("h1");
+        this.adjust_table_el = div.createEl("table");
+
         div = this.contentEl.createEl("div")
         this.debug_log_title_el = div.createEl("h1");
         this.debug_log_table_el = div.createEl("table");
@@ -189,6 +195,8 @@ export class GTVView extends TextFileView
         this.analysis_table_el.empty();
         this.record_title_el.setText("交易记录");
         this.record_table_el.empty();
+        this.adjust_title_el.setText("调整记录");
+        this.adjust_table_el.empty();
         // this.debug_log_title_el.setText("调试日志");
         // this.debug_log_table_el.empty();
 
@@ -212,6 +220,8 @@ export class GTVView extends TextFileView
             this.DisplayTable(grid_trading, this.analysis_table_el, grid_trading.trading_analysis, false);
             // 交易记录
             this.DisplayTable(grid_trading, this.record_table_el, grid_trading.trading_record, false);
+            // 调整记录
+            this.DisplayTable(grid_trading, this.adjust_table_el, grid_trading.adjust_record, false);
             // 调试信息
             // this.DisplayTable(grid_trading, this.debug_log_table_el, grid_trading.debug_log, false);
         }

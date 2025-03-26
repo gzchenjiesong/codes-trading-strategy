@@ -5,7 +5,7 @@
 import { Md5 } from "ts-md5/dist/md5";
 import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr } from "./mymath";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr, IsNumeric } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
 
@@ -26,6 +26,7 @@ export class GridTrading
     holding_analysis: string [][];
     holding_record: string [][];
     stock_analysis: string [][];
+    adjust_record: string [][];
     debug_log: string [][];
     mode_type: string;
 
@@ -39,6 +40,7 @@ export class GridTrading
     clear_price: number;
     clear_avg_price: number;
     raw_trading_record: string [][];
+    raw_adjust_record: string [][];
     clear_sell_record: Map<string, number>;
     buy_grid_record: string [];
     sgrid_step_table: string [][];
@@ -104,6 +106,88 @@ export class GridTrading
         }
     }
 
+    ParseRawData(data: string): boolean
+    {
+        const new_md5 = Md5.hashStr(data);
+        if (new_md5 === this.data_md5)
+        {
+            return false;
+        }
+        this.data_md5 = new_md5;
+        // 159869,游戏ETF,sz,1,0.95
+        const lines = data.split("\n");
+        const strs = lines[0].split(",");
+        this.target_stock = Number(strs[1]);
+        this.stock_name = strs[2];
+        if (this.stock_name == "DEBUGTEST")
+        {
+            this.is_debug = true;
+        }
+        this.market_code = strs[3];
+        this.target_price = Number(strs[4]);
+        this.current_price = Number(strs[5]);
+        this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[1]);
+        if (this.remote_current_price > 0)
+        {
+            this.current_price = this.remote_current_price;
+        }
+        // BASE,10000,0.67,0.005,0.001,100,0.1
+        // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
+        // ADJ,2025-03-24,调整首网价格,0.756->0.856,0.567,10000
+        // BUY,2024-01-23,小网0,0.760,12000
+        this.grid_settings = this.plugin_env.grid_settings.Clone();
+        this.raw_trading_record = [];
+        this.raw_adjust_record = [];
+        this.buy_grid_record = [];
+        this.sgrid_step_table = [];
+        this.mgrid_step_table = [];
+        this.lgrid_step_table = [];
+        this.clear_sell_record = new Map<string, number>;
+        for (let idx=1; idx < lines.length; idx++)
+        {
+            const strs = lines[idx].split(",");
+            if (strs[0] == "BUY")
+            {
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
+                this.buy_grid_record.push(strs[2]);
+            }
+            if (strs[0] == "SELL")
+            {
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
+                this.buy_grid_record.remove(strs[2]);
+            }
+            if (strs[0] == "SHARE")
+            {
+                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "BASE")
+            {
+                this.grid_settings.UnpackBase(strs);
+            }
+            if (strs[0] == "STEP")
+            {
+                this.grid_settings.UnpackStep(strs);
+            }
+            if (strs[0] == "SGRID")
+            {
+                this.sgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "MGRID")
+            {
+                this.mgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "LGRID")
+            {
+                this.lgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
+            }
+            if (strs[0] == "ADJ")
+            {
+                this.raw_adjust_record.push([strs[1], strs[2], strs[3], strs[4], strs[5]])
+            }
+        }
+        return true;
+    }
+
     InitTradingOverview()
     {
         this.stock_overview = [GRID_COLOR_STOCK_OVERVIEW, String(this.target_stock), this.stock_name, this.target_price.toFixed(3), this.current_price.toFixed(3),
@@ -165,82 +249,6 @@ export class GridTrading
                 }
             }
         }
-    }
-
-    ParseRawData(data: string): boolean
-    {
-        const new_md5 = Md5.hashStr(data);
-        if (new_md5 === this.data_md5)
-        {
-            return false;
-        }
-        this.data_md5 = new_md5;
-        // 159869,游戏ETF,sz,1,0.95
-        const lines = data.split("\n");
-        const strs = lines[0].split(",");
-        this.target_stock = Number(strs[1]);
-        this.stock_name = strs[2];
-        if (this.stock_name == "DEBUGTEST")
-        {
-            this.is_debug = true;
-        }
-        this.market_code = strs[3];
-        this.target_price = Number(strs[4]);
-        this.current_price = Number(strs[5]);
-        this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[1]);
-        if (this.remote_current_price > 0)
-        {
-            this.current_price = this.remote_current_price;
-        }
-        // BASE,10000,0.67,0.005,0.001,100,0.1
-        // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
-        // BUY,2024-01-23,小网0
-        this.grid_settings = this.plugin_env.grid_settings.Clone();
-        this.raw_trading_record = [];
-        this.buy_grid_record = [];
-        this.sgrid_step_table = [];
-        this.mgrid_step_table = [];
-        this.lgrid_step_table = [];
-        this.clear_sell_record = new Map<string, number>;
-        for (let idx=1; idx < lines.length; idx++)
-        {
-            const strs = lines[idx].split(",");
-            if (strs[0] == "BUY")
-            {
-                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
-                this.buy_grid_record.push(strs[2]);
-            }
-            if (strs[0] == "SELL")
-            {
-                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
-                this.buy_grid_record.remove(strs[2]);
-            }
-            if (strs[0] == "SHARE")
-            {
-                this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
-            }
-            if (strs[0] == "BASE")
-            {
-                this.grid_settings.UnpackBase(strs);
-            }
-            if (strs[0] == "STEP")
-            {
-                this.grid_settings.UnpackStep(strs);
-            }
-            if (strs[0] == "SGRID")
-            {
-                this.sgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
-            }
-            if (strs[0] == "MGRID")
-            {
-                this.mgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
-            }
-            if (strs[0] == "LGRID")
-            {
-                this.lgrid_step_table.push([strs[1], strs[2], strs[3], strs[4]]);
-            }
-        }
-        return true;
     }
 
     InitStockTable()
@@ -349,6 +357,41 @@ export class GridTrading
 
     InitTradingRecord()
     {
+        // 调整记录
+        const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+        let adjust_price = 0;
+        let adjust_count = 0;
+        let adjust_cost = 0;
+        this.adjust_record = [["调整日期", "调整类型", "调整内容","交易价格", "交易股数", "消耗本金"]];
+        for (let idx=0; idx<this.raw_adjust_record.length; idx++)
+        {
+            if (IsNumeric(this.raw_adjust_record[idx][3]))
+            {
+                adjust_price = Number(this.raw_adjust_record[idx][3]);
+            }
+            else
+            {
+                adjust_price = 0;
+            }
+            if (IsNumeric(this.raw_adjust_record[idx][4]))
+            {
+                adjust_count = Number(this.raw_adjust_record[idx][4]);
+            }
+            else
+            {
+                adjust_count = 0;
+            }
+            adjust_cost = Math.ceil(adjust_price * adjust_count);
+            if (adjust_cost > 0)
+            {
+                this.adjust_record.push([this.raw_adjust_record[idx][0], this.raw_adjust_record[idx][1], this.raw_adjust_record[idx][2], adjust_price.toFixed(precision), String(adjust_count), String(adjust_cost)]);
+            }
+            else
+            {
+                this.adjust_record.push([this.raw_adjust_record[idx][0], this.raw_adjust_record[idx][1], this.raw_adjust_record[idx][2], "-", "-", "-"]);
+            }
+        }
+        // 交易记录
         this.total_retain = 0;
         this.retain_cost = 0;
         this.total_cost = 0;
