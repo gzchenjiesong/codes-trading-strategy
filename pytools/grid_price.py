@@ -1,9 +1,10 @@
 # coding=utf-8
 
+import os
 import time
 import requests
 import datetime
-from calendar import monthrange
+import calendar
 import json
 
 '''
@@ -20,8 +21,71 @@ API_PERFIX = "http://api.biyingapi.com/jj/lskx"
 API_PERFIX2 = "http://api1.biyingapi.com/jj/lskx"
 API_LICENCE = "b192f53a6d6928033"
 
+STOCK_RECORD_DATE_LIST = [
+    "sh510050,2005-02-04,SPL,1.1838",
+    "sh510050,2006-05-19,DIV,0.0240",
+    "sh510050,2006-11-16,DIV,0.0370",
+    "sh510050,2008-11-19,DIV,0.0600",
+    "sh510050,2010-11-16,DIV,0.0260",
+    "sh510050,2012-05-16,DIV,0.0110",
+    "sh510050,2012-11-13,DIV,0.0370",
+    "sh510050,2013-11-15,DIV,0.0530",
+    "sh510050,2014-11-17,DIV,0.0430",
+    "sh510050,2016-11-29,DIV,0.0530",
+    "sh510050,2017-11-28,DIV,0.0540",
+    "sh510050,2018-12-03,DIV,0.0490",
+    "sh510050,2019-12-02,DIV,0.0470",
+    "sh510050,2020-11-30,DIV,0.0510",
+    "sh510050,2021-11-29,DIV,0.0410",
+    "sh510050,2022-12-01,DIV,0.0370",
+    "sh510050,2023-11-27,DIV,0.0390",
+    "sh510050,2024-12-02,DIV,0.0550",
+    "sh512200,2024-08-09,SPL,0.3581",
+    "sh512400,2024-09-18,DIV,0.0100",
+    "sh512710,2021-03-19,SPL,2.0000",
+    "sh512760,2020-09-09,SPL,2.0000",
+    "sz159845,2021-03-22,SPL,1.5739",
+    "sz159845,2022-08-01,SPL,0.3523",
+    "sz159845,2023-02-28,SPL,0.7476",
+    "sz159901,2006-04-14,SPL,0.9495",
+    "sz159901,2007-07-11,DIV,0.1200",
+    "sz159901,2010-11-19,SPL,5.0000",
+    "sz159901,2014-08-29,SPL,0.2000",
+    "sz159901,2021-04-09,SPL,2.0000",
+    "sz159920,2018-06-22,DIV,0.0760",
+    "sz159938,2022-05-27,SPL,2.0000",
+]
+
+STOCK_RECORD_DATE_DICT = {}
+
+
+def GetStockRecordDate():
+    STOCK_RECORD_DATE_DICT.clear()
+
+    for record_date in STOCK_RECORD_DATE_LIST:
+        strs = record_date.split(",")
+        date_list = STOCK_RECORD_DATE_DICT.setdefault(strs[0], [])
+        if strs[2] == "SPL":
+            date_list.append((strs[1], "real_price / %s" % strs[3]))
+        elif strs[2] == "REV":
+            date_list.append((strs[1], "real_price * %s" % strs[3]))
+        elif strs[2] == "DIV":
+            date_list.append((strs[1], "real_price - %s" % strs[3]))
+
+
+def CalcForwardAdjustedPrice(record_date_list, date_str, real_price):
+    for record_date, eval_str in record_date_list:
+        if date_str <= record_date:
+            real_price = eval(eval_str)
+    return real_price
+
 
 def GetStockHistoryPrice(stock_code):
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    if os.path.exists("caches/%s_%s.txt" % (stock_code, today_str)):
+        content = open("caches/%s_%s.txt" % (stock_code, today_str)).read()
+        return json.loads(content)
+
     api_url = "%s/%s/dn/%s" % (API_PERFIX, stock_code, API_LICENCE)
 
     try:
@@ -32,6 +96,7 @@ def GetStockHistoryPrice(stock_code):
         if response.status_code == 200:
             # 获取网页内容（自动处理编码）
             content = response.text
+            open("caches/%s_%s.txt" % (stock_code, today_str), "w").write(content)
             return json.loads(content)
         else:
             print(f"请求失败，状态码：{response.status_code}")
@@ -49,7 +114,7 @@ def n_years_ago(year_delta):
         target_date = today.replace(year=target_year)
     except ValueError:
         # 处理闰日等特殊情况（如2月29日遇到非闰年）
-        _, last_day = monthrange(target_year, today.month)
+        _, last_day = calendar.monthrange(target_year, today.month)
         target_date = datetime.date(target_year, today.month, last_day)
     return target_date.strftime("%Y-%m-%d")
 
@@ -61,17 +126,22 @@ def CalcHistoryPrice(stock_code):
     today = datetime.date.today().strftime("%Y-%m-%d")
     five_years_ago = n_years_ago(5)
     ten_years_ago = n_years_ago(10)
+    record_date_list = STOCK_RECORD_DATE_DICT.get(stock_code, [])
     for data in price_list:
-        if data['d'] > five_years_ago:
-            series_5.append(data['c'])
-        if data['d'] > ten_years_ago:
-            series_10.append(data['c'])
-        if data['d'] == today:
-            cur_price = data['c']
-        if data['h'] > max_price:
-            max_price = data['h']
-        if data['l'] < min_price:
-            min_price = data['l']
+        date_str = data['d']
+        close = CalcForwardAdjustedPrice(record_date_list, date_str, data['c'])
+        high = CalcForwardAdjustedPrice(record_date_list, date_str, data['h'])
+        low = CalcForwardAdjustedPrice(record_date_list, date_str, data['l'])
+        if date_str > five_years_ago:
+            series_5.append(close)
+        if date_str > ten_years_ago:
+            series_10.append(close)
+        if date_str == today:
+            cur_price = close
+        if high > max_price:
+            max_price = high
+        if low < min_price:
+            min_price = low
     return cur_price, max_price, min_price, series_5, series_10
 
 
@@ -121,31 +191,32 @@ def Calc(stock_code, fst_price, cur_price = None):
 
 
 STOCK_DICT = {
-    #"sz159611": ("电力ETF", 1.12),
-    #"sz159819": ("人工智能ETF", 0.98),
-    #"sz159845": ("中证1000ETF", 2.92),
-    #"sz159869": ("游戏ETF", 1.1),
-    #"sz159875": ("新能源ETF", 0.75),
-    #"sz159901": ("深证100ETF", 3.811),
-    #"sz159920": ("恒生ETF", 1.470),
-    #"sz159938": ("医药卫生ETF", 0.951),
-    #"sz162411": ("华宝油气LOF", 0.810),
-    #"sh510050": ("上证50ETF", 3.450),
-    #"sh512200": ("房地产ETF", 1.5),
-    #"sh512400": ("有色金属ETF", 1.2),
-    #"sh512710": ("军工龙头ETF", 0.820),
-    #"sh512760": ("芯片ETF", 1.5),
-    #"sh512280": ("证券ETF", 1.15),
-    #"sh513050": ("中概互联网ETF", 1.790),
-    #"sh513180": ("恒生科技ETF", 0.951),
-    #"sh515650": ("消费50ETF", 1.433),
-    #"sh516970": ("基建50ETF", 1.250),
+    "sz159611": ("电力ETF", 1.12),
+    "sz159819": ("人工智能ETF", 0.98),
+    "sz159845": ("中证1000ETF", 2.92),
+    "sz159869": ("游戏ETF", 1.1),
+    "sz159875": ("新能源ETF", 0.75),
+    "sz159901": ("深证100ETF", 3.811),
+    "sz159920": ("恒生ETF", 1.470),
+    "sz159938": ("医药卫生ETF", 1.046),
+    "sz162411": ("华宝油气LOF", 0.810),
+    "sh510050": ("上证50ETF", 3.450),
+    "sh512200": ("房地产ETF", 1.5),
+    "sh512400": ("有色金属ETF", 1.2),
+    "sh512710": ("军工龙头ETF", 0.820),
+    "sh512760": ("芯片ETF", 1.5),
+    "sh512880": ("证券ETF", 1.15),
+    "sh513050": ("中概互联网ETF", 1.790),
+    "sh513180": ("恒生科技ETF", 0.951),
+    "sh515650": ("消费50ETF", 1.433),
+    "sh516970": ("基建50ETF", 1.250),
     "sh588380": ("双创50ETF", 0.750),
 }
 
+GetStockRecordDate()
 
 for stock_code, (stock_name, fst_price) in STOCK_DICT.items():
     print(stock_name, "POS -> TIME")
     Calc(stock_code, fst_price)
     print("---------------------------------")
-    time.sleep(10)
+    time.sleep(1)
