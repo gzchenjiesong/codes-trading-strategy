@@ -22,6 +22,8 @@ export class GTOView extends TextFileView
     stock_filled_overview: string [][];
     income_overview: string [][];
     holding_overview: string [][];
+    mgrid_buy_total_cost: number;
+    lgrid_buy_total_cost: number;
 
     overview_title_el: HTMLElement;
     overview_table_el: HTMLElement;
@@ -141,16 +143,19 @@ export class GTOView extends TextFileView
 
     SumupAllStock()
     {
-        this.stock_overview = [];
+        this.stock_overview = [
+                                ["标的总数", ""],
+                                ["买入监控", ""],
+                                ["卖出监控", ""],
+                                ["", "买入总额", "-5%买入总额", "-3%买入总额", "+3%卖出总额", "+5%卖出总额", "卖出总额"],
+                                ["全部", "0", "0", "0", "0", "0", "0"],
+                                ["小网", "0", "0", "0", "0", "0", "0"],
+                                ["中网", "0", "0", "0", "0", "0", "0"],
+                                ["大网", "0", "0", "0", "0", "0", "0"],
+                            ];
         let stock_count: number = 0;
         let buy_monitor_count: number = 0;
         let sell_monitor_count: number = 0;
-        let _3_buy_cost: number = 0;
-        let _5_buy_cost: number = 0;
-        let total_buy_cost: number = 0;
-        let _3_sell_gain: number = 0;
-        let _5_sell_gain: number = 0;
-        let total_sell_gain: number = 0;
 
         for(let idx=0; idx<this.custom_stock_overview.length; idx++)
         {
@@ -159,37 +164,112 @@ export class GTOView extends TextFileView
             {
                 stock_count++;
             }
-            if (stock[0] == GRID_COLOR_SELL_OVERVIEW)
-            {
-                sell_monitor_count++;
-                total_sell_gain += Number(stock[8]);
-                const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
-                if (trading_gap < 3)
-                {
-                    _3_sell_gain += Number(stock[8]);
-                }
-                if (trading_gap < 5)
-                {
-                    _5_sell_gain += Number(stock[8]);
-                }
-            }
             if (stock[0] == GRID_COLOR_BUY_OVERVIEW)
             {
                 buy_monitor_count++;
-                total_buy_cost += Number(stock[8]);
+
+                this.stock_overview[4][1] = StringPlus(this.stock_overview[4][1], stock[8], 1);
+                if (stock[3].startsWith("小网"))
+                {
+                    this.stock_overview[5][1] =  StringPlus(this.stock_overview[5][1], stock[8], 1);
+                }
+                if (stock[3].startsWith("中网"))
+                {
+                    this.stock_overview[6][1] =  StringPlus(this.stock_overview[6][1], stock[8], 1);
+                }
+                if (stock[3].startsWith("大网"))
+                {
+                    this.stock_overview[7][1] =  StringPlus(this.stock_overview[7][1], stock[8], 1);
+                }
                 const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
                 if ( trading_gap > -3)
                 {
-                    _3_buy_cost += Number(stock[8]);
+                    this.stock_overview[4][3] = StringPlus(this.stock_overview[4][3], stock[8], 1);
+                    if (stock[3].startsWith("小网"))
+                    {
+                        this.stock_overview[5][3] =  StringPlus(this.stock_overview[5][3], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("中网"))
+                    {
+                        this.stock_overview[6][3] =  StringPlus(this.stock_overview[6][3], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("大网"))
+                    {
+                        this.stock_overview[7][3] =  StringPlus(this.stock_overview[7][3], stock[8], 1);
+                    }
                 }
                 if (trading_gap > -5)
                 {
-                    _5_buy_cost += Number(stock[8]);
+                    this.stock_overview[4][2] = StringPlus(this.stock_overview[4][2], stock[8], 1);
+                    if (stock[3].startsWith("小网"))
+                    {
+                        this.stock_overview[5][2] =  StringPlus(this.stock_overview[5][2], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("中网"))
+                    {
+                        this.stock_overview[6][2] =  StringPlus(this.stock_overview[6][2], stock[8], 10);
+                    }
+                    if (stock[3].startsWith("大网"))
+                    {
+                        this.stock_overview[7][2] =  StringPlus(this.stock_overview[7][2], stock[8], 1);
+                    }
+                }
+            }
+            if (stock[0] == GRID_COLOR_SELL_OVERVIEW)
+            {
+                sell_monitor_count++;
+
+                this.stock_overview[4][6] = StringPlus(this.stock_overview[4][6], stock[8], 1);
+                if (stock[3].startsWith("小网"))
+                {
+                    this.stock_overview[5][6] =  StringPlus(this.stock_overview[5][6], stock[8], 1);
+                }
+                if (stock[3].startsWith("中网"))
+                {
+                    this.stock_overview[6][6] =  StringPlus(this.stock_overview[6][6], stock[8], 1);
+                }
+                if (stock[3].startsWith("大网"))
+                {
+                    this.stock_overview[7][6] =  StringPlus(this.stock_overview[7][6], stock[8], 1);
+                }
+                const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
+                if (trading_gap < 3)
+                {
+                    this.stock_overview[4][4] = StringPlus(this.stock_overview[4][4], stock[8], 1);
+                    if (stock[3].startsWith("小网"))
+                    {
+                        this.stock_overview[5][4] =  StringPlus(this.stock_overview[5][4], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("中网"))
+                    {
+                        this.stock_overview[6][4] =  StringPlus(this.stock_overview[6][4], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("大网"))
+                    {
+                        this.stock_overview[7][4] =  StringPlus(this.stock_overview[7][4], stock[8], 1);
+                    }
+                }
+                if (trading_gap < 5)
+                {
+                    this.stock_overview[4][5] = StringPlus(this.stock_overview[4][5], stock[8], 1);
+                    if (stock[3].startsWith("小网"))
+                    {
+                        this.stock_overview[5][5] =  StringPlus(this.stock_overview[5][5], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("中网"))
+                    {
+                        this.stock_overview[6][5] =  StringPlus(this.stock_overview[6][5], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("大网"))
+                    {
+                        this.stock_overview[7][5] =  StringPlus(this.stock_overview[7][5], stock[8], 1);
+                    }
                 }
             }
         }
-        this.stock_overview.push(["标的总数", "卖出监控", "买入监控", "买入总额", "-3%内买入总额", "-5%内买入总额", "+3%内卖出总额", "+5%内卖出总额"]);
-        this.stock_overview.push([String(stock_count), String(sell_monitor_count), String(buy_monitor_count), String(total_buy_cost), String(_3_buy_cost), String(_5_buy_cost), String(_3_sell_gain), String(_5_sell_gain)]);
+        this.stock_overview[0][1] = String(stock_count);
+        this.stock_overview[1][1] = String(buy_monitor_count);
+        this.stock_overview[2][1] = String(sell_monitor_count);
     }
 
     DebugLog(level: string, log_str: string, extra_info: string)

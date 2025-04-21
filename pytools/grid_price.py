@@ -57,7 +57,8 @@ STOCK_RECORD_DATE_LIST = [
 ]
 
 STOCK_RECORD_DATE_DICT = {}
-
+today_str = datetime.date.today().strftime("%Y-%m-%d")
+#today_str = "2025-03-28"
 
 def GetStockRecordDate():
     STOCK_RECORD_DATE_DICT.clear()
@@ -81,7 +82,6 @@ def CalcForwardAdjustedPrice(record_date_list, date_str, real_price):
 
 
 def GetStockHistoryPrice(stock_code):
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
     if os.path.exists("caches/%s_%s.txt" % (stock_code, today_str)):
         content = open("caches/%s_%s.txt" % (stock_code, today_str)).read()
         return json.loads(content)
@@ -123,7 +123,6 @@ def CalcHistoryPrice(stock_code):
     cur_price, max_price, min_price = 0, 0, 999999999
     series_10, series_5 = [], []
     price_list = GetStockHistoryPrice(stock_code)
-    today = datetime.date.today().strftime("%Y-%m-%d")
     five_years_ago = n_years_ago(5)
     ten_years_ago = n_years_ago(10)
     record_date_list = STOCK_RECORD_DATE_DICT.get(stock_code, [])
@@ -136,7 +135,7 @@ def CalcHistoryPrice(stock_code):
             series_5.append(close)
         if date_str > ten_years_ago:
             series_10.append(close)
-        if date_str == today:
+        if date_str == today_str:
             cur_price = close
         if high > max_price:
             max_price = high
@@ -210,7 +209,7 @@ STOCK_DICT = {
     "sh513180": ("恒生科技ETF", 0.951),
     "sh515650": ("消费50ETF", 1.433),
     "sh516970": ("基建50ETF", 1.250),
-    "sh588380": ("双创50ETF", 0.750),
+    "sh588380": ("双创50ETF", 0.840),
 }
 
 GetStockRecordDate()

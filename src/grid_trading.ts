@@ -46,6 +46,7 @@ export class GridTrading
     sgrid_step_table: string [][];
     mgrid_step_table: string [][];
     lgrid_step_table: string [][];
+    force_view_grid_list: string [];
 
     total_retain: number;
     retain_cost: number;
@@ -143,6 +144,7 @@ export class GridTrading
         this.mgrid_step_table = [];
         this.lgrid_step_table = [];
         this.clear_sell_record = new Map<string, number>;
+        this.force_view_grid_list = [];
         for (let idx=1; idx < lines.length; idx++)
         {
             const strs = lines[idx].split(",");
@@ -184,6 +186,11 @@ export class GridTrading
             {
                 this.raw_adjust_record.push([strs[1], strs[2], strs[3], strs[4], strs[5]])
             }
+            if (strs[0] == "VIEW")
+            {
+                for (let i=1; i < strs.length; i++)
+                    this.force_view_grid_list.push(strs[i])
+            }
         }
         return true;
     }
@@ -204,6 +211,7 @@ export class GridTrading
                         this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], trading_gap]);
             }
         }
+
         this.stock_sell_overview = [];
         if (this.sell_monitor_rows.length > 0)
         {
@@ -278,6 +286,16 @@ export class GridTrading
             ["最低价格", String(mini_price), "价格百分位", ToPercent(this.grid_settings.MINIMUM_BUY_PCT, 1)],
             ["停格跌幅", ToTradingGap(this.current_price, mini_price), "清格涨幅", ToTradingGap(this.current_price, this.empty_price, 1)],
         ];
+        // 增加强制监控网格
+        for (let idx=0; idx<this.force_view_grid_list.length; idx++)
+        {
+            const row = this.FindTradingGridRowIndex(this.force_view_grid_list[idx]);
+            if (row < 0 || this.buy_monitor_rows.includes(row))
+            {
+                continue;
+            }
+            this.buy_monitor_rows.push(row);
+        }
     }
 
     InitGridParam()
@@ -775,6 +793,18 @@ export class GridTrading
             }
         }
         return [];
+    }
+
+    FindTradingGridRowIndex(grid_name: string): number
+    {
+        for (let idx=0; idx<this.trading_table.length; idx++)
+        {
+            if (this.trading_table[idx][0] == grid_name)
+            {
+                return idx;
+            }
+        }
+        return -1;
     }
 
     SortTradingTable()
