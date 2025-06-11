@@ -86,6 +86,7 @@ export default class TradingStrategy extends Plugin
         //DebugLog('run FetchAllStockCurrentPrice ', this.app.vault.getName());
         const api_licence = this.plugin_env.GetAPILisence()
         const grid_folder = this.app.vault.getAbstractFileByPath('GridTrading');
+        let price_cache = new Map<string, number>;
         //DebugLog("getAbstractFileByPath ", String(grid_folder));
         if (grid_folder instanceof TFolder)
         {
@@ -94,11 +95,53 @@ export default class TradingStrategy extends Plugin
                 window.clearInterval(this.interval_callback_id);
                 this.interval_callback_id = -1;
             }
-            //DebugLog('Folder children count ', String(grid_folder.children.length));
             for (let index=0; index < grid_folder.children.length; index++)
             {
                 const grid_file = grid_folder.children[index];
-                //DebugLog("For file name ", grid_file.name);
+                
+                if (grid_file instanceof TFile && grid_file.name.endsWith(".gto"))
+                {
+                    const content = await this.app.vault.cachedRead(grid_file);
+                    const lines = content.split("\n");
+                    for (let idx=0; idx<lines.length; idx++)
+                    {
+                        const strs = lines[idx].split(",");
+                        if (strs[0] == "PRICE")
+                        {
+                            price_cache.set(strs[1], Number(strs[3]));
+                        }
+                    }
+                }
+            }
+            for (let index=0; index < grid_folder.children.length; index++)
+            {
+                const grid_file = grid_folder.children[index];
+            
+                if (grid_file instanceof TFile && grid_file.name.endsWith(".gtv"))
+                {
+                    const content = await this.app.vault.cachedRead(grid_file);
+                    const mode_str = content.split("\n")[0].split(",")[0];
+                    let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
+                    //DebugLog("GetAndGenGridTrading, name: ", grid_file.name, ", mode: ", mode_str);
+                    grid_trading.InitGridTrading(content);
+                    if (grid_trading.is_debug)
+                    {
+                        continue;
+                    }
+                    let current_price = price_cache.get(grid_trading.market_code + String(grid_trading.target_stock));
+                    if (current_price)
+                    {
+                        this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
+                        grid_trading.UpdateRemotePrice(current_price);
+                    }
+                }
+            }
+            //DebugLog('Folder children count ', String(grid_folder.children.length));
+            /*
+            for (let index=0; index < grid_folder.children.length; index++)
+            {
+                const grid_file = grid_folder.children[index];
+            
                 if (grid_file instanceof TFile && grid_file.name.endsWith(".gtv"))
                 {
                     //DebugLog("read file ", grid_file.name);
@@ -129,26 +172,8 @@ export default class TradingStrategy extends Plugin
                     //DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);
                 }
-
-                if (grid_file instanceof TFile && grid_file.name.endsWith(".gto"))
-                {
-                    const content = await this.app.vault.cachedRead(grid_file);
-                    //521880,证券ETF,sh,1.030,0.890
-                    const lines = content.split("\n");
-                    for (let index=0; index < lines.length; index++)
-                    {
-                        const strs = lines[index].split(",");
-                        if (strs[0] != "BUY" && strs[0] != "SELL")
-                        {
-                            let current_price = await GetETFCurrentPrice(strs[2] + strs[0], api_licence);
-                            current_price = Number(current_price);
-                            this.plugin_env.stock_remote_price_dict.set(strs[0], current_price);
-                            await sleep(1000);
-                            //DebugLog("查询 ", strs[1], " 当前最新价格为: ", current_price);
-                        }
-                    }
-                }
             }
+            */
             this.plugin_env.PublishEvent(FETCH_CURRENT_PRICE);
         }
     }

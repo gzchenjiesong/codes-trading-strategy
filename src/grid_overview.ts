@@ -24,6 +24,8 @@ export class GTOView extends TextFileView
     holding_overview: string [][];
     mgrid_buy_total_cost: number;
     lgrid_buy_total_cost: number;
+    active_stock_count: number;
+    clear_stock_count: number;
 
     overview_title_el: HTMLElement;
     overview_table_el: HTMLElement;
@@ -72,7 +74,7 @@ export class GTOView extends TextFileView
         this.income_overview.push(["最大持仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview.push(["最大清格", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大清盘", "0", "0", "0", "0", "0", "0", "-"]);
-        const stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "回调仓位"]];
+        let stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "回调仓位"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
@@ -91,12 +93,22 @@ export class GTOView extends TextFileView
             }
         }
         grid_file_names.sort();
+        this.active_stock_count = 0;
+        this.clear_stock_count = 0;
         for (let idx=0; idx<grid_file_names.length; idx++)
         {
             const grid_trading = this.plugin_env.grid_trading_dict.get(grid_file_names[idx]);
             if (grid_trading instanceof GridTrading && grid_trading.IsStock() && !grid_trading.is_debug)
             {
                 grid_trading.InitTradingOverview()
+                if (grid_trading.IsMonitor())
+                {
+                    this.active_stock_count++;
+                }
+                if (grid_trading.is_clear)
+                {
+                    this.clear_stock_count++;
+                }
                 stock_table.push(grid_trading.stock_overview);
                 buy_table = buy_table.concat(grid_trading.stock_buy_overview);
                 sell_table = sell_table.concat(grid_trading.stock_sell_overview);
@@ -144,7 +156,7 @@ export class GTOView extends TextFileView
     SumupAllStock()
     {
         this.stock_overview = [
-                                ["标的总数", ""],
+                                ["标的总数", "", "持仓标的", String(this.active_stock_count), "待开格数", String(this.clear_stock_count)],
                                 ["买入监控", ""],
                                 ["卖出监控", ""],
                                 ["", "买入总额", "-5%买入总额", "-3%买入总额", "+3%卖出总额", "+5%卖出总额", "卖出总额"],

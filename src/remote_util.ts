@@ -28,6 +28,7 @@ async function FetchData(data_api: string, api_licence: string, debug_log: strin
 
 export async function GetETFCurrentPrice(etf_code: string, api_licence: string, retry_count = 3)
 {
+    /*
     if (!(etf_code.startsWith("sz") || etf_code.startsWith("sh")))
     {
         // 非sz/sh市场的ETF价格无法自动获取
@@ -51,11 +52,13 @@ export async function GetETFCurrentPrice(etf_code: string, api_licence: string, 
         }
         retry_count = retry_count - 1;
     }
+    */
     return -1;
 }
 
 export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, retry_count = 3)
 {
+    /*
     if (!(lof_code.startsWith("sz") || lof_code.startsWith("sh")))
     {
         // 非sz/sh市场的LOF价格无法自动获取
@@ -77,6 +80,7 @@ export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, 
             await sleep(30 * 1000);
         }
     }
+    */
     return -1;
 }
 

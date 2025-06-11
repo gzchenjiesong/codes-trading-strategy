@@ -8,6 +8,7 @@ import { PERFIT_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr, IsNumeric } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { DebugLog } from "./remote_util";
+import { log } from "console";
 
 
 export class GridTrading 
@@ -15,7 +16,6 @@ export class GridTrading
     plugin_env: PluginEnv;
     grid_settings: GridTradingSettings;
     is_empty: boolean;
-    is_debug: boolean;
     data_md5: string;
     stock_table: string [][];
     param_table: string [][];
@@ -29,6 +29,12 @@ export class GridTrading
     adjust_record: string [][];
     debug_log: string [][];
     mode_type: string;
+    // 状态控制
+    ctrl_status: string;
+    is_debug: boolean;      // 调试数据全部忽略
+    is_pause: boolean;      // 仅暂停买入监控,继续卖出监控,计入回撤数据
+    is_clear: boolean;      // 已经清盘了结,等待重新开启,不计入回撤数据
+    is_cancel: boolean;     // 预备取消标的,等待清盘结算,仅显示标的总览
 
     target_stock: number;
     stock_name: string;
@@ -47,6 +53,7 @@ export class GridTrading
     mgrid_step_table: string [][];
     lgrid_step_table: string [][];
     force_view_grid_list: string [];
+    hist_analysis: string [][];
 
     total_retain: number;
     retain_cost: number;
@@ -107,6 +114,18 @@ export class GridTrading
         }
     }
 
+    IsMonitor(): boolean
+    {
+        if (this.is_empty || this.is_debug || this.is_clear || this.is_cancel)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
     ParseRawData(data: string): boolean
     {
         const new_md5 = Md5.hashStr(data);
@@ -120,10 +139,6 @@ export class GridTrading
         const strs = lines[0].split(",");
         this.target_stock = Number(strs[1]);
         this.stock_name = strs[2];
-        if (this.stock_name == "DEBUGTEST")
-        {
-            this.is_debug = true;
-        }
         this.market_code = strs[3];
         this.target_price = Number(strs[4]);
         this.current_price = Number(strs[5]);
@@ -136,6 +151,11 @@ export class GridTrading
         // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
         // ADJ,2025-03-24,调整首网价格,0.756->0.856,0.567,10000
         // BUY,2024-01-23,小网0,0.760,12000
+        // CTRL,DEBUG
+        this.is_debug = false;
+        this.is_pause = false;
+        this.is_clear = false;
+        this.is_cancel = false;
         this.grid_settings = this.plugin_env.grid_settings.Clone();
         this.raw_trading_record = [];
         this.raw_adjust_record = [];
@@ -189,7 +209,37 @@ export class GridTrading
             if (strs[0] == "VIEW")
             {
                 for (let i=1; i < strs.length; i++)
-                    this.force_view_grid_list.push(strs[i])
+                    if (strs[i].trim().length > 0)
+                        this.force_view_grid_list.push(strs[i].trim())
+            }
+            if (strs[0] == "CTRL")
+            {
+                for (let i=1; i<strs.length; i++)
+                {
+                    if (strs[i].trim() == "DEBUG")
+                    {
+                        this.is_debug = true;
+                    }
+                    if (strs[i].trim() == "PAUSE")
+                    {
+                        this.is_pause = true;
+                    }
+                    if (strs[i].trim() == "CLEAR")
+                    {
+                        this.is_clear = true;
+                    }
+                    if (strs[i].trim() == "CANCEL")
+                    {
+                        this.is_cancel = true;
+                    }
+                }
+            }
+            if (strs[0] == "HIST")
+            {
+                if (strs[1] == "RANGE")
+                {
+                    
+                }
             }
         }
         return true;
@@ -201,7 +251,7 @@ export class GridTrading
                 ToPercent(this.current_price / this.target_price, 1), String(this.total_hold), String(this.total_cost),
                 ToTradingGap(this.total_cost, this.total_hold * this.current_price, 2), this.trading_income[5][10]];
         this.stock_buy_overview = [];
-        if (this.buy_monitor_rows.length > 0)
+        if (this.buy_monitor_rows.length > 0 && !(this.is_pause || this.is_clear || this.is_cancel))
         {
             for (let idx=0; idx<this.buy_monitor_rows.length; idx++)
             {
@@ -213,7 +263,7 @@ export class GridTrading
         }
 
         this.stock_sell_overview = [];
-        if (this.sell_monitor_rows.length > 0)
+        if (this.sell_monitor_rows.length > 0 && !(this.is_clear || this.is_cancel))
         {
             for (let idx=0; idx<this.sell_monitor_rows.length; idx++)
             {
@@ -547,12 +597,13 @@ export class GridTrading
         this.trading_income.push(["", "持仓股数", "占用本金", "持仓金额", "持仓均价", "实际价格", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "投入仓位"]);
         this.trading_income.push(this.GenerateIncomeRow("累计筹码", this.total_retain, this.retain_cost, this.current_price, this.retain_cost, 0, 0));
 
+        let need_slump = !this.is_clear && !this.is_cancel
         // 当前持仓
         this.CalcTradingIncome("当前", this.current_price / this.target_price, this.empty_price, this.clear_avg_price, this.clear_price, false);
         // 短期回调
-        this.CalcTradingIncome("回调", this.grid_settings.BOTTOM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price);
+        this.CalcTradingIncome("回调", this.grid_settings.BOTTOM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price, need_slump);
         // 最大回撤
-        this.CalcTradingIncome("最大", this.grid_settings.MINIMUM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price);
+        this.CalcTradingIncome("最大", this.grid_settings.MINIMUM_BUY_PCT, this.empty_price, this.clear_avg_price, this.clear_price, need_slump);
     }
 
     InitHoldingAnalysis()
