@@ -7,8 +7,6 @@ import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr, IsNumeric } from "./mymath";
 import { PluginEnv } from "./plugin_env";
-import { DebugLog } from "./remote_util";
-import { log } from "console";
 
 
 export class GridTrading 
@@ -468,6 +466,7 @@ export class GridTrading
         this.stock_passive_filled_record = [];
         this.stock_active_filled_record = [];
         this.holding_record = [];
+        this.clear_sell_record.clear();
         let raw_record = [... this.raw_trading_record];
         let cursor = 0;
         let retain_sell = 0;
@@ -550,7 +549,7 @@ export class GridTrading
                     if (raw_record[idx][0] == "SELL" && raw_record[idx][2].startsWith("利润"))
                     {
                         this.total_retain = this.total_retain - Number(raw_record[idx][4]);
-                        this.retain_cost = this.retain_cost - Number(raw_record[idx][3]) * Number(raw_record[idx][4]);
+                        this.retain_cost = this.retain_cost - Math.floor(Number(raw_record[idx][3]) * Number(raw_record[idx][4]));
                         retain_sell = retain_sell + Number(raw_record[idx][4]);
                         let sell_count = this.clear_sell_record.get(raw_record[idx][2]);
                         if (sell_count == undefined)
@@ -583,6 +582,10 @@ export class GridTrading
         {
             const row = this.GenerateClearRow(PERFIT_TYPE_NAME_STR, index, this.grid_settings.CLEAR_STEP_PCT, MyFloor((this.total_retain + retain_sell) / 3, 100));
             this.trading_table.push(row);
+            if (Number(row[8]) <= 0)
+            {
+                continue;
+            }
             if (current_pct + this.grid_settings.MAX_RISE_PCT >= ToNumber(row[1]))
             {
                 this.sell_monitor_rows.push(this.trading_table.length - 1);

@@ -5,7 +5,6 @@
 import { SGRID_TYPE_NAME_STR, MGRID_TYPE_NAME_STR, LGRID_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, FixedPrice } from "./mymath";
 import { PluginEnv } from "./plugin_env";
-import { DebugLog } from "./remote_util";
 import { GridTrading } from "./grid_trading";
 
 

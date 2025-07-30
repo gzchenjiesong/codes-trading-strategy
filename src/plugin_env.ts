@@ -24,6 +24,7 @@ export class PluginEnv
     stock_remote_price_dict: Map<string, number>;
     event_callback_dict: Map<string, Map<number, Callback>>
     _event_guid: number;
+    cash_balance: number;
 
     constructor()
     {
@@ -34,6 +35,7 @@ export class PluginEnv
         this.stock_remote_price_dict = new Map<string, number>;
         this.event_callback_dict = new Map<string, Map<number, Callback>>;
         this._event_guid = 0;
+        this.cash_balance = 0;
     }
 
     GetAPILisence(): string

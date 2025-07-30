@@ -110,6 +110,10 @@ export default class TradingStrategy extends Plugin
                         {
                             price_cache.set(strs[1], Number(strs[3]));
                         }
+                        if (strs[0] == 'CASH')
+                        {
+                            this.plugin_env.cash_balance = Number(strs[1]);
+                        }
                     }
                 }
             }

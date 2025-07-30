@@ -88,17 +88,19 @@ STOCK_RECORD_DATE_LIST = [
 CACHE_DIR_PATH = "pytools/caches"
 STOCK_RECORD_DATE_DICT = {}
 #today_str = datetime.date.today().strftime("%Y-%m-%d")
-today_str = "2025-06-03"
+today_str = "2025-07-14"
 
+# HIST,CUR01,MIN,RPD,MAX,APD,APD,TIME
 '''
 HIST,RANGE,2021-10-14,2025-04-10
-HIST,CUR01,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,CUR03,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,CUR05,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,CUR10,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,FST03,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,FST05,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
-HIST,FST10,1.5,2025-04-10,89.2%,0.5,2021-04-10,-59%,67.7%,45.2%
+HIST,CUR01,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,CUR03,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,CUR05,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,CUR10,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,CUR99,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,FST03,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,FST05,1.5,89.2%,0.5,-59%,+67.7%,45.2%
+HIST,FST10,1.5,89.2%,0.5,-59%,+67.7%,45.2%
 '''
 
 
@@ -118,6 +120,20 @@ class Stock:
         self.begin_date = None
         self.end_date = None
 
+    def Format(self):
+        min_price = min(self.series_03)
+        max_price = max(self.series_03)
+        total_count = len(self.series_03)
+        up_count = 0
+        for price in self.series_03:
+            if self.cur_price > price:
+                up_count += 1
+        pos_pct = (self.cur_price - min_price) / (max_price - min_price) * 100
+        time_pct = up_count / total_count * 100
+        fst_pos = max_price / self.fst_price * 100
+        format_str = "%s-%s: CUR03(DAY-%s)\t %3.2f%%\t%3.2f%%\t%3.2f%%\t%2.3f\t%2.3f\t%2.3f" % (self.stock_code, self.stock_name, total_count, pos_pct, time_pct, fst_pos, min_price, self.cur_price, max_price)
+        return format_str
+
     def Output(self):
         def _PCT(s, t):
             return "%3.0f%%" % math.ceil(t / s * 100)
@@ -130,14 +146,14 @@ class Stock:
 
         print("%s\t%s\t%s~%s\t" %(self.stock_code, self.stock_name, self.begin_date, self.end_date))
         print("\tCUR: %2.3f\t%s" % (self.cur_price, _PCT(self.fst_price, self.cur_price)))
-        print("RANGE\tMIN\t PCT\tMAX\t PCT\tPOS\tTIME(目标价比%X时间高)")
+        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tTIME(目标价比%X时间高)")
         self.OutputSeries("CUR01", self.series_01, self.cur_price)
         self.OutputSeries("CUR03", self.series_03, self.cur_price)
         self.OutputSeries("CUR05", self.series_05, self.cur_price)
         self.OutputSeries("CUR10", self.series_10, self.cur_price)
         self.OutputSeries("CUR99", self.series_99, self.cur_price)
         print("\tFST: %2.3f\t%s" % (self.fst_price, _GAP(self.cur_price, self.fst_price)))
-        print("RANGE\tMIN\t PCT\tMAX\t PCT\tPOS\tTIME(目标价比%X时间高)")
+        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tTIME(目标价比%X时间高)")
         self.OutputSeries("FST01", self.series_01, self.fst_price)
         self.OutputSeries("FST03", self.series_03, self.fst_price)
         self.OutputSeries("FST05", self.series_05, self.fst_price)
@@ -155,9 +171,14 @@ class Stock:
                 up_count += 1
         pos_pct = (target_price - min_price) / (max_price - min_price) * 100
         time_pct = up_count / total_count * 100
-        def _PCT(s, t):
-            return "%3.0f%%" % math.ceil(t / s * 100)
-        print("%s\t%2.3f\t%s\t%2.3f\t%s\t%3.2f%%\t%3.2f%%" % (perfix_str, min_price, _PCT(target_price, min_price), max_price, _PCT(target_price, max_price), pos_pct, time_pct))
+
+        def _GAP(s, t):
+            if (s > t):
+                return "-%.0f%%" % math.ceil((s - t) / s * 100)
+            else:
+                return "+%.0f%%" % math.ceil((t - s) / s * 100)
+
+        print("%s\t%2.3f\t%3.2f%%\t%2.3f\t%s\t%s\t%3.2f%%" % (perfix_str, min_price, pos_pct, max_price, _GAP(target_price, min_price), _GAP(target_price, max_price), time_pct))
 
 
 def GetStockRecordDate():
@@ -292,9 +313,15 @@ if not os.path.exists(CACHE_DIR_PATH):
     os.mkdir(CACHE_DIR_PATH)
 
 GetStockRecordDate()
+stock_object_dict = {}
+
 
 for stock_code, (stock_name, fst_price) in STOCK_DICT.items():
-    stock = Stock(stock_code, stock_name, fst_price)
-    CalcHistoryPrice(stock)
-    stock.Output()
+    stock_obj = Stock(stock_code, stock_name, fst_price)
+    CalcHistoryPrice(stock_obj)
+    stock_object_dict[stock_code] = stock_obj
+    stock_obj.Output()
     #time.sleep(1)
+
+for stock_code, stock_obj in stock_object_dict.items():
+    print(stock_obj.Format())

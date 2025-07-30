@@ -56,6 +56,7 @@ export class GTOView extends TextFileView
 
     ReadCustomStock()
     {
+        const cash_str = String(this.plugin_env.cash_balance);
         this.holding_overview = [["筹码类型", "占用本金", "持仓金额", "持仓盈亏", "清格盈利", "清仓盈利", "持仓占比", "本金占比"]]
         this.holding_overview.push(["总额", "0", "0", "0", "0", "0", "0", "0"]);
         this.holding_overview.push(["小网", "0", "0", "0", "0", "0", "0", "0"]);
@@ -63,18 +64,19 @@ export class GTOView extends TextFileView
         this.holding_overview.push(["大网", "0", "0", "0", "0", "0", "0", "0"]);
         this.holding_overview.push(["累积", "0", "0", "0", "0", "0", "0", "0"]);
         this.holding_overview.push(["补仓", "0", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview = [["", "占用本金", "持仓金额", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "投入仓位"]];
+        this.holding_overview.push(["现金", cash_str, "0", "-", "-", "-", "-", "0"]);
+        this.income_overview = [["", "占用本金", "持仓金额", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "本金仓位"]];
         this.income_overview.push(["累积筹码", "0", "0", "0", "0", "0", "0", "-"]);
-        this.income_overview.push(["当前持仓", "0", "0", "0", "0", "0", "0", "0"]);
-        this.income_overview.push(["当前清格", "0", "0", "0", "0", "0", "0", "-"]);
-        this.income_overview.push(["当前清仓", "0", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["当前持仓", "0", "0", "0", "0", cash_str, "0", "0"]);
+        this.income_overview.push(["当前清格", "0", "0", "0", "0", cash_str, "0", "-"]);
+        this.income_overview.push(["当前清仓", "0", "0", "0", "0", cash_str, "0", "-"]);
         this.income_overview.push(["回调持仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview.push(["回调清格", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["回调清盘", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大持仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview.push(["最大清格", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大清盘", "0", "0", "0", "0", "0", "0", "-"]);
-        let stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "回调仓位"]];
+        let stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "本金占比"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
@@ -135,19 +137,24 @@ export class GTOView extends TextFileView
             }
         }
         let current_cost = Number(this.income_overview[2][1]);
+        let current_cash = current_cost + this.plugin_env.cash_balance;
         let current_hold = Number(this.income_overview[2][2]);
         for (let idx=1; idx<=10; idx++)
         {
             this.income_overview[idx][6] = ToPercent(Number(this.income_overview[idx][3]) / Number(this.income_overview[idx][4]), 2);
             if (this.income_overview[idx][7] != "-")
             {
-                this.income_overview[idx][7] = ToPercent(current_cost / Number(this.income_overview[idx][4]));
+                this.income_overview[idx][7] = ToPercent(Number(this.income_overview[idx][1]) / current_cash);
             }
         }
-        for (let idx=1; idx<=6; idx++)
+        for (let idx=1; idx<=7; idx++)
         {
             this.holding_overview[idx][6] = ProportionPctStr(Number(this.holding_overview[idx][2]), current_hold, 2);
-            this.holding_overview[idx][7] = ProportionPctStr(Number(this.holding_overview[idx][1]), current_cost, 2);
+            this.holding_overview[idx][7] = ProportionPctStr(Number(this.holding_overview[idx][1]), current_cash, 2);
+        }
+        for (let idx=1; idx<stock_table.length; idx++)
+        {
+            stock_table[idx][9] = ProportionPctStr(Number(stock_table[idx][7]), current_cash, 2);
         }
         this.custom_stock_overview = [...stock_table, ...buy_table, ...sell_table];
         this.stock_filled_overview = [...passive_table, ...active_table];
