@@ -88,7 +88,7 @@ STOCK_RECORD_DATE_LIST = [
 CACHE_DIR_PATH = "pytools/caches"
 STOCK_RECORD_DATE_DICT = {}
 #today_str = datetime.date.today().strftime("%Y-%m-%d")
-today_str = "2025-07-14"
+today_str = "2025-08-28"
 
 # HIST,CUR01,MIN,RPD,MAX,APD,APD,TIME
 '''
@@ -112,6 +112,7 @@ class Stock:
         self.fst_price = fst_price
         #
         self.cur_price = 0
+        self.series_00 = []
         self.series_01 = []
         self.series_03 = []
         self.series_05 = []
@@ -119,6 +120,12 @@ class Stock:
         self.series_99 = []
         self.begin_date = None
         self.end_date = None
+
+    def Drawdown(self):
+        sdd = min(self.series_00) / self.fst_price
+        mdd = (min(self.series_03) + min(self.series_05)) / 2 / self.fst_price
+        format_str = "%s-%s-%s: %.2f,%.2f" % (self.stock_code, self.stock_name, self.fst_price, mdd, sdd)
+        return format_str
 
     def Format(self):
         min_price = min(self.series_03)
@@ -146,14 +153,16 @@ class Stock:
 
         print("%s\t%s\t%s~%s\t" %(self.stock_code, self.stock_name, self.begin_date, self.end_date))
         print("\tCUR: %2.3f\t%s" % (self.cur_price, _PCT(self.fst_price, self.cur_price)))
-        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tTIME(目标价比%X时间高)")
+        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tMDD\tTIME(目标价比%X时间高)")
+        self.OutputSeries("CUR00", self.series_00, self.cur_price)
         self.OutputSeries("CUR01", self.series_01, self.cur_price)
         self.OutputSeries("CUR03", self.series_03, self.cur_price)
         self.OutputSeries("CUR05", self.series_05, self.cur_price)
         self.OutputSeries("CUR10", self.series_10, self.cur_price)
         self.OutputSeries("CUR99", self.series_99, self.cur_price)
         print("\tFST: %2.3f\t%s" % (self.fst_price, _GAP(self.cur_price, self.fst_price)))
-        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tTIME(目标价比%X时间高)")
+        print("RANGE\tMIN\t RPD\tMAX\t APD\tAPD\tMDD\tTIME(目标价比%X时间高)")
+        self.OutputSeries("FST00", self.series_00, self.fst_price)
         self.OutputSeries("FST01", self.series_01, self.fst_price)
         self.OutputSeries("FST03", self.series_03, self.fst_price)
         self.OutputSeries("FST05", self.series_05, self.fst_price)
@@ -178,7 +187,7 @@ class Stock:
             else:
                 return "+%.0f%%" % math.ceil((t - s) / s * 100)
 
-        print("%s\t%2.3f\t%3.2f%%\t%2.3f\t%s\t%s\t%3.2f%%" % (perfix_str, min_price, pos_pct, max_price, _GAP(target_price, min_price), _GAP(target_price, max_price), time_pct))
+        print("%s\t%2.3f\t%3.2f%%\t%2.3f\t%s\t%s\t%s\t%3.2f%%" % (perfix_str, min_price, pos_pct, max_price, _GAP(target_price, min_price), _GAP(target_price, max_price), _GAP(max_price, min_price), time_pct))
 
 
 def GetStockRecordDate():
@@ -229,14 +238,17 @@ def GetStockHistoryPrice(stock_code):
 
 def n_years_ago(year_delta):
     today = datetime.date.today()
-    target_year = today.year - year_delta
-    try:
-        # 尝试直接替换年份
-        target_date = today.replace(year=target_year)
-    except ValueError:
-        # 处理闰日等特殊情况（如2月29日遇到非闰年）
-        _, last_day = calendar.monthrange(target_year, today.month)
-        target_date = datetime.date(target_year, today.month, last_day)
+    if year_delta == 0:
+        target_date = today.replace(month=1, day=1)
+    else:
+        target_year = today.year - year_delta
+        try:
+            # 尝试直接替换年份
+            target_date = today.replace(year=target_year)
+        except ValueError:
+            # 处理闰日等特殊情况（如2月29日遇到非闰年）
+            _, last_day = calendar.monthrange(target_year, today.month)
+            target_date = datetime.date(target_year, today.month, last_day)
     return target_date.strftime("%Y-%m-%d")
 
 
@@ -245,6 +257,7 @@ def CalcHistoryPrice(stock: Stock):
     begin_date = today_str
     end_date = '0'
     price_list = GetStockHistoryPrice(stock_code)
+    zero_years_ago = n_years_ago(0)
     one_years_ago = n_years_ago(1)
     three_years_ago = n_years_ago(3)
     five_years_ago = n_years_ago(5)
@@ -256,6 +269,8 @@ def CalcHistoryPrice(stock: Stock):
         high = CalcForwardAdjustedPrice(record_date_list, date_str, data['h'])
         low = CalcForwardAdjustedPrice(record_date_list, date_str, data['l'])
         stock.series_99.append(close)
+        if date_str > zero_years_ago:
+            stock.series_00.append(close)
         if date_str > one_years_ago:
             stock.series_01.append(close)
         if date_str > three_years_ago:
@@ -278,16 +293,16 @@ def CalcHistoryPrice(stock: Stock):
 
 STOCK_DICT = {
     # 指数
-    "sh510050": ("上证50ETF", 3.450),
-    "sz159901": ("深证100ETF", 3.811),
-    "sz159845": ("中证1000ETF", 2.92),
-    "sh588380": ("双创50ETF", 0.840),
+    "sh510050": ("上证50ETF", 3.348),
+    "sz159901": ("深证100ETF", 3.636),
+    "sz159845": ("中证1000ETF", 3.522),
+    "sh588380": ("双创50ETF", 0.923),
     "sz159920": ("恒生 ETF", 1.470),
     "sh513180": ("恒生科技ETF", 0.951),
-    "sh513500": ("标普500ETF", 1.608),
+    "sh513500": ("标普500ETF", 1.819),
     "sz159632": ("纳斯达克ETF", 1.5),
     # 行业
-    "sh512880": ("证券 ETF", 1.15),
+    "sh512880": ("证券 ETF", 1.354),
     "sh512760": ("芯片 ETF", 1.5),
     "sz159611": ("电力 ETF", 0.95),
     "sz159869": ("游戏 ETF", 1.1),
@@ -297,14 +312,14 @@ STOCK_DICT = {
     "sz161725": ("白酒LOF", 0.90),
     # 概念
     "sh515650": ("消费50ETF", 1.433),
-    "sh516970": ("基建50ETF", 1.250),
+    "sh516970": ("基建50ETF", 1.247),
     "sz159875": ("新能源ETF", 0.75),
     "sh562500": ("机器人ETF", 0.98),
-    "sz159819": ("人工智能ETF", 0.98),
+    "sz159819": ("人工智能ETF", 1.182),
     "sh513050": ("中概互联网ETF", 1.790),
     # 大宗
     "sz162411": ("华宝油气LOF", 0.810),
-    "sh512400": ("有色金属ETF", 1.2),
+    "sh512400": ("有色金属ETF", 1.198),
 }
 
 #STOCK_DICT = {"sh562500": ("机器人ETF", 0.9),}
@@ -325,3 +340,6 @@ for stock_code, (stock_name, fst_price) in STOCK_DICT.items():
 
 for stock_code, stock_obj in stock_object_dict.items():
     print(stock_obj.Format())
+
+for stock_code, stock_obj in stock_object_dict.items():
+    print(stock_obj.Drawdown())

@@ -26,9 +26,49 @@ async function FetchData(data_api: string, api_licence: string, debug_log: strin
     return response.json;
 }
 
+
+export async function GetCurrentPriceFromSina(etf_code: string, retry_count = 3)
+{
+    const data_api = "https://hq.sinajs.cn/list=" + etf_code;
+    let current_price = -1;
+    try
+    {
+        // 使用 Obsidian 提供的 requestUrl 方法发起请求
+        const response = await requestUrl({
+            url: data_api,
+            method: "GET",
+            headers: {
+                referer: "https://finance.sina.com.cn/",
+            },
+        });
+
+        // 解码内容
+        let content = response.text;
+        try {
+            // 用 gbk 解码（在 JS 中，需使用 TextDecoder）
+            const gbkDecoder = new TextDecoder("gbk");
+            const uint8Array = new TextEncoder().encode(content); // 将内容转为字节数组
+            content = gbkDecoder.decode(uint8Array);
+        } catch (error) {
+            // 如果解码失败，则使用默认 UTF-8
+            console.warn("Fallback to UTF-8 decoding.", error);
+        }
+        // 处理价格
+        const contents = content.trim().split("\n");
+        current_price = Number(contents[0].split(",")[3]);
+        DebugLog(etf_code, " : ", String(current_price))
+    }
+    catch (error)
+    {
+        DebugLog(etf_code,  " get price failed ", error.message);
+    }
+
+    return current_price;
+}
+
+
 export async function GetETFCurrentPrice(etf_code: string, api_licence: string, retry_count = 3)
 {
-    /*
     if (!(etf_code.startsWith("sz") || etf_code.startsWith("sh")))
     {
         // 非sz/sh市场的ETF价格无法自动获取
@@ -52,13 +92,11 @@ export async function GetETFCurrentPrice(etf_code: string, api_licence: string, 
         }
         retry_count = retry_count - 1;
     }
-    */
     return -1;
 }
 
 export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, retry_count = 3)
 {
-    /*
     if (!(lof_code.startsWith("sz") || lof_code.startsWith("sh")))
     {
         // 非sz/sh市场的LOF价格无法自动获取
@@ -80,7 +118,6 @@ export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, 
             await sleep(30 * 1000);
         }
     }
-    */
     return -1;
 }
 
@@ -90,5 +127,5 @@ export function DebugLog(...args)
     args.forEach((cell, i) => {
         log_str = log_str + String(cell);
     });
-    new Notice(log_str);
+    new Notice(log_str, 0);
 }

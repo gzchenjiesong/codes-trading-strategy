@@ -6,7 +6,7 @@ export function FixedPrice(price: number, pct: number, precision: number)
 {
     const scale = 10 ** precision;
     // 百分位保留小数点后一位
-    return Math.floor(Math.floor(price * scale) * Math.floor(pct * 1000) / 1000) / scale;
+    return Math.floor(Math.floor(price * scale) * Math.floor(pct * 10000) / 10000) / scale;
 }
 
 export function AlignPrice(price: number, precision: number)

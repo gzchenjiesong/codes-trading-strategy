@@ -59,7 +59,7 @@ export class GridTradingModeThree extends GridTrading
         this.sell_monitor_rows = []
         this.disable_rows = []
         this.trading_table = []
-        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅"];
+        this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅", "止盈获利", "清仓获利"];
 
         const max_rise_pct = this.grid_settings.MAX_RISE_PCT;
         let grid_sell_pct = 1.0 + this.grid_settings.SGRID_STEP_PCT
@@ -192,11 +192,16 @@ export class GridTradingModeThree extends GridTrading
         const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
         const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
 
+        const [first_income, clear_income] = this.CalcGridIncomes(buy_count - sell_count);
+        const buy_cost = Math.ceil(buy_price * buy_count);
+        const sell_gain = Math.ceil(sell_price * sell_count);
+
         return [grid_name, ToPercent(grid_buy_pct), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), 
                 buy_price.toFixed(precision), String(buy_count), String(Math.ceil(buy_price * buy_count)),
                 (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), sell_price.toFixed(precision),
                 String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1),
-                ToTradingGap(buy_price, sell_price, 1)];
+                ToTradingGap(buy_price, sell_price, 1), ToPercent((first_income + sell_gain - buy_cost) / buy_cost), 
+                ToPercent((clear_income + sell_gain - buy_cost) / buy_cost)];
     }
 
 }

@@ -26,6 +26,7 @@ export class GTOView extends TextFileView
     lgrid_buy_total_cost: number;
     active_stock_count: number;
     clear_stock_count: number;
+    pause_stock_count: number;
 
     overview_title_el: HTMLElement;
     overview_table_el: HTMLElement;
@@ -64,17 +65,20 @@ export class GTOView extends TextFileView
         this.holding_overview.push(["大网", "0", "0", "0", "0", "0", "0", "0"]);
         this.holding_overview.push(["累积", "0", "0", "0", "0", "0", "0", "0"]);
         this.holding_overview.push(["补仓", "0", "0", "0", "0", "0", "0", "0"]);
-        this.holding_overview.push(["现金", cash_str, "0", "-", "-", "-", "-", "0"]);
+        this.holding_overview.push(["现金", cash_str, cash_str, "-", "-", "-", "0", "0"]);
         this.income_overview = [["", "占用本金", "持仓金额", "持仓盈亏", "投入资金", "账面资金", "投入盈亏", "本金仓位"]];
         this.income_overview.push(["累积筹码", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["当前持仓", "0", "0", "0", "0", cash_str, "0", "0"]);
         this.income_overview.push(["当前清格", "0", "0", "0", "0", cash_str, "0", "-"]);
+        this.income_overview.push(["当前止盈", "0", "0", "0", "0", cash_str, "0", "-"]);
         this.income_overview.push(["当前清仓", "0", "0", "0", "0", cash_str, "0", "-"]);
         this.income_overview.push(["回调持仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview.push(["回调清格", "0", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["回调止盈", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["回调清盘", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大持仓", "0", "0", "0", "0", "0", "0", "0"]);
         this.income_overview.push(["最大清格", "0", "0", "0", "0", "0", "0", "-"]);
+        this.income_overview.push(["最大止盈", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大清盘", "0", "0", "0", "0", "0", "0", "-"]);
         let stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "本金占比"]];
         let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
@@ -97,6 +101,7 @@ export class GTOView extends TextFileView
         grid_file_names.sort();
         this.active_stock_count = 0;
         this.clear_stock_count = 0;
+        this.pause_stock_count = 0;
         for (let idx=0; idx<grid_file_names.length; idx++)
         {
             const grid_trading = this.plugin_env.grid_trading_dict.get(grid_file_names[idx]);
@@ -111,13 +116,21 @@ export class GTOView extends TextFileView
                 {
                     this.clear_stock_count++;
                 }
+                if (grid_trading.is_pause)
+                {
+                    this.pause_stock_count++;
+                }
                 stock_table.push(grid_trading.stock_overview);
                 buy_table = buy_table.concat(grid_trading.stock_buy_overview);
                 sell_table = sell_table.concat(grid_trading.stock_sell_overview);
                 passive_table = passive_table.concat(grid_trading.stock_passive_filled_record);
                 active_table = active_table.concat(grid_trading.stock_active_filled_record);
+                if (grid_trading.is_clear || grid_trading.is_cancel)
+                {
+                    continue;
+                }
                 const trading_income = grid_trading.trading_income;
-                for (let idx=1; idx<=10; idx++)
+                for (let idx=1; idx<=13; idx++)
                 {
                     this.income_overview[idx][1] = StringPlus(this.income_overview[idx][1], trading_income[idx][2], 1);
                     this.income_overview[idx][2] = StringPlus(this.income_overview[idx][2], trading_income[idx][3], 1);
@@ -139,7 +152,7 @@ export class GTOView extends TextFileView
         let current_cost = Number(this.income_overview[2][1]);
         let current_cash = current_cost + this.plugin_env.cash_balance;
         let current_hold = Number(this.income_overview[2][2]);
-        for (let idx=1; idx<=10; idx++)
+        for (let idx=1; idx<=13; idx++)
         {
             this.income_overview[idx][6] = ToPercent(Number(this.income_overview[idx][3]) / Number(this.income_overview[idx][4]), 2);
             if (this.income_overview[idx][7] != "-")
@@ -152,6 +165,7 @@ export class GTOView extends TextFileView
             this.holding_overview[idx][6] = ProportionPctStr(Number(this.holding_overview[idx][2]), current_hold, 2);
             this.holding_overview[idx][7] = ProportionPctStr(Number(this.holding_overview[idx][1]), current_cash, 2);
         }
+        this.holding_overview[7][6] = ProportionPctStr(Number(this.holding_overview[7][2]), current_hold + this.plugin_env.cash_balance, 2);
         for (let idx=1; idx<stock_table.length; idx++)
         {
             stock_table[idx][9] = ProportionPctStr(Number(stock_table[idx][7]), current_cash, 2);
@@ -163,7 +177,7 @@ export class GTOView extends TextFileView
     SumupAllStock()
     {
         this.stock_overview = [
-                                ["标的总数", "", "持仓标的", String(this.active_stock_count), "待开格数", String(this.clear_stock_count)],
+                                ["持仓标的", String(this.active_stock_count), "暂停买入标的", String(this.pause_stock_count), "待开格数", String(this.clear_stock_count)],
                                 ["买入监控", ""],
                                 ["卖出监控", ""],
                                 ["", "买入总额", "-5%买入总额", "-3%买入总额", "+3%卖出总额", "+5%卖出总额", "卖出总额"],
@@ -171,6 +185,7 @@ export class GTOView extends TextFileView
                                 ["小网", "0", "0", "0", "0", "0", "0"],
                                 ["中网", "0", "0", "0", "0", "0", "0"],
                                 ["大网", "0", "0", "0", "0", "0", "0"],
+                                ["利润", "0", "0", "0", "0", "0", "0"],
                             ];
         let stock_count: number = 0;
         let buy_monitor_count: number = 0;
@@ -200,6 +215,10 @@ export class GTOView extends TextFileView
                 {
                     this.stock_overview[7][1] =  StringPlus(this.stock_overview[7][1], stock[8], 1);
                 }
+                if (stock[3].startsWith("利润"))
+                {
+                    this.stock_overview[8][1] = StringPlus(this.stock_overview[8][1], stock[8], 1);
+                }
                 const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
                 if ( trading_gap > -3)
                 {
@@ -216,6 +235,10 @@ export class GTOView extends TextFileView
                     {
                         this.stock_overview[7][3] =  StringPlus(this.stock_overview[7][3], stock[8], 1);
                     }
+                    if (stock[3].startsWith("利润"))
+                    {
+                        this.stock_overview[8][3] = StringPlus(this.stock_overview[8][3], stock[8], 1);
+                    }
                 }
                 if (trading_gap > -5)
                 {
@@ -231,6 +254,10 @@ export class GTOView extends TextFileView
                     if (stock[3].startsWith("大网"))
                     {
                         this.stock_overview[7][2] =  StringPlus(this.stock_overview[7][2], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("利润"))
+                    {
+                        this.stock_overview[8][2] = StringPlus(this.stock_overview[8][2], stock[8], 1);
                     }
                 }
             }
@@ -251,6 +278,10 @@ export class GTOView extends TextFileView
                 {
                     this.stock_overview[7][6] =  StringPlus(this.stock_overview[7][6], stock[8], 1);
                 }
+                if (stock[3].startsWith("利润"))
+                {
+                    this.stock_overview[8][6] = StringPlus(this.stock_overview[8][6], stock[8], 1);
+                }
                 const trading_gap = Number(stock[9].replace("%", "").replace("+", ""));
                 if (trading_gap < 3)
                 {
@@ -266,6 +297,10 @@ export class GTOView extends TextFileView
                     if (stock[3].startsWith("大网"))
                     {
                         this.stock_overview[7][4] =  StringPlus(this.stock_overview[7][4], stock[8], 1);
+                    }
+                    if (stock[3].startsWith("利润"))
+                    {
+                        this.stock_overview[8][4] = StringPlus(this.stock_overview[8][4], stock[8], 1);
                     }
                 }
                 if (trading_gap < 5)
@@ -283,10 +318,13 @@ export class GTOView extends TextFileView
                     {
                         this.stock_overview[7][5] =  StringPlus(this.stock_overview[7][5], stock[8], 1);
                     }
+                    if (stock[3].startsWith("利润"))
+                    {
+                        this.stock_overview[8][5] = StringPlus(this.stock_overview[8][5], stock[8], 1);
+                    }
                 }
             }
         }
-        this.stock_overview[0][1] = String(stock_count);
         this.stock_overview[1][1] = String(buy_monitor_count);
         this.stock_overview[2][1] = String(sell_monitor_count);
     }

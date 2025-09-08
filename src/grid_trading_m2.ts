@@ -219,11 +219,16 @@ export class GridTradingModeTwo extends GridTrading
         const retain_count = (sell_price - buy_price) * buy_count * grid_retain_count;
         const sell_count = MyFloor((sell_price * buy_count - retain_count) / sell_price, this.grid_settings.MIN_BATCH_COUNT);
 
+        const [first_income, clear_income] = this.CalcGridIncomes(buy_count - sell_count);
+        const buy_cost = Math.ceil(buy_price * buy_count);
+        const sell_gain = Math.ceil(sell_price * sell_count);
+
         return [grid_name + String(idx), ToPercent(buy_price_step), (buy_price + this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), 
                 buy_price.toFixed(precision), String(buy_count), String(Math.ceil(buy_price * buy_count)),
                 (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision), sell_price.toFixed(precision),
                 String(sell_count), String(Math.ceil(sell_price * sell_count)), ToTradingGap(sell_price, buy_price, 1),
-                ToTradingGap(buy_price, sell_price, 1)];
+                ToTradingGap(buy_price, sell_price, 1), ToPercent((first_income + sell_gain - buy_cost) / buy_cost), 
+                ToPercent((clear_income + sell_gain - buy_cost) / buy_cost)];
     }
 
 }
