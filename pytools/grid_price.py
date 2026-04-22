@@ -62,6 +62,7 @@ STOCK_RECORD_DATE_LIST = [
     # sh512880,证券ETF
     # sh512760,芯片ETF
     "sh512760,2020-09-09,SPL,2.0000",
+    "sh512760,2026-03-30,SPL,2.0000",
     # sz159611,电力ETF
     # sz159869,游戏ETF
     # sh512200,房地产ETF
@@ -83,12 +84,14 @@ STOCK_RECORD_DATE_LIST = [
     # sz162411,华宝油气LOF
     # sh512400,有色金属ETF
     "sh512400,2024-09-18,DIV,0.0100",
+    # sh562000,中证A100ETF
+    "sh562000,2025-11-07,SPL,2.0000",
 ]
 
 CACHE_DIR_PATH = "pytools/caches"
 STOCK_RECORD_DATE_DICT = {}
-#today_str = datetime.date.today().strftime("%Y-%m-%d")
-today_str = "2025-08-28"
+
+today_str = datetime.date.today().strftime("%Y-%m-%d")
 
 # HIST,CUR01,MIN,RPD,MAX,APD,APD,TIME
 '''
@@ -126,6 +129,25 @@ class Stock:
         mdd = (min(self.series_03) + min(self.series_05)) / 2 / self.fst_price
         format_str = "%s-%s-%s: %.2f,%.2f" % (self.stock_code, self.stock_name, self.fst_price, mdd, sdd)
         return format_str
+
+    def FormatHistoryPrice(self):
+        week_series_01 = self.WeekAvgSeries(self.series_01)
+        week_series_05 = self.WeekAvgSeries(self.series_05)
+        week_series_99 = self.WeekAvgSeries(self.series_99)
+
+        format_str = "HIST,%s,%s,%s,%2.3f,%2.3f,%2.3f,%2.3f,%2.3f,%2.3f" % (self.stock_code, self.begin_date, self.end_date, min(week_series_01), max(week_series_01), min(week_series_05), max(week_series_05), max(0.001, min(week_series_99)), max(week_series_99))
+        return format_str
+
+    def WeekAvgSeries(self, price_series):
+        week_series = []
+        total_count = len(price_series)
+        week_count = int(total_count / 5)
+        for i in range(week_count):
+            week_sum = 0
+            for j in range(5):
+                week_sum += price_series[i * 5 + j]
+            week_series.append(week_sum / 5)
+        return week_series
 
     def Format(self):
         min_price = min(self.series_03)
@@ -252,8 +274,20 @@ def n_years_ago(year_delta):
     return target_date.strftime("%Y-%m-%d")
 
 
+def GetStockCurrentPrice(stock_code):
+    api_url = "https://hq.sinajs.cn/list=%s" % stock_code
+    resp = requests.get(api_url, headers={"referer" : "https://finance.sina.com.cn/"})
+    try:
+        content = resp.content.decode('gbk')
+    except UnicodeDecodeError:
+        content = resp.content.decode('utf-8')
+    stock_info = content.strip().split(",")
+    stock_price = stock_info[3]
+    return float(stock_price)
+
+
 def CalcHistoryPrice(stock: Stock):
-    cur_price = 0
+    cur_price = GetStockCurrentPrice(stock.stock_code)
     begin_date = today_str
     end_date = '0'
     price_list = GetStockHistoryPrice(stock_code)
@@ -279,8 +313,6 @@ def CalcHistoryPrice(stock: Stock):
             stock.series_05.append(close)
         if date_str > ten_years_ago:
             stock.series_10.append(close)
-        if date_str == today_str:
-            cur_price = close
         if date_str < begin_date:
             begin_date = date_str
         if date_str > end_date:
@@ -295,31 +327,37 @@ STOCK_DICT = {
     # 指数
     "sh510050": ("上证50ETF", 3.348),
     "sz159901": ("深证100ETF", 3.636),
+    "sh562000": ("中证A100ETF", 1.266),
     "sz159845": ("中证1000ETF", 3.522),
     "sh588380": ("双创50ETF", 0.923),
-    "sz159920": ("恒生 ETF", 1.470),
-    "sh513180": ("恒生科技ETF", 0.951),
+    "sz159920": ("恒生ETF", 1.468),
+    "sh513180": ("恒科ETF", 0.951),
     "sh513500": ("标普500ETF", 1.819),
-    "sz159632": ("纳斯达克ETF", 1.5),
+    "sz159632": ("纳指100ETF", 1.405),
     # 行业
-    "sh512880": ("证券 ETF", 1.354),
-    "sh512760": ("芯片 ETF", 1.5),
-    "sz159611": ("电力 ETF", 0.95),
-    "sz159869": ("游戏 ETF", 1.1),
-    "sh512200": ("房地产ETF", 1.5),
-    "sh512710": ("军工龙头ETF", 0.820),
-    "sz159938": ("医药卫生ETF", 1.046),
-    "sz161725": ("白酒LOF", 0.90),
+    "sh512880": ("证券ETF", 1.354),
+    "sh512760": ("芯片ETF", 1.503),
+    "sz159869": ("游戏ETF", 1.092),
+    "sh512710": ("军工ETF", 0.820),
+    "sz159938": ("医药ETF", 1.046),
+    "sz159611": ("电力ETF", 0.950),
+    "sh512200": ("地产ETF", 1.523),
+    "sz161725": ("白酒LOF", 0.900),
+    "sz159870": ("化工ETF", 0.861),
+    "sz159852": ("软件ETF", 0.984),
+    "sh515880": ("通信ETF", 2.068),
+    "sz159326": ("电网设备ETF", 1.482),
     # 概念
     "sh515650": ("消费50ETF", 1.433),
     "sh516970": ("基建50ETF", 1.247),
-    "sz159875": ("新能源ETF", 0.75),
-    "sh562500": ("机器人ETF", 0.98),
-    "sz159819": ("人工智能ETF", 1.182),
-    "sh513050": ("中概互联网ETF", 1.790),
+    "sz159875": ("新能源ETF", 0.750),
+    "sh562500": ("机器人ETF", 1.231),
+    "sz159559": ("机器人50ETF", 1.651),
+    "sz159819": ("人工智能ETF", 1.298),
+    "sh513050": ("中概ETF", 1.790),
     # 大宗
-    "sz162411": ("华宝油气LOF", 0.810),
-    "sh512400": ("有色金属ETF", 1.198),
+    "sz162411": ("油气LOF", 0.810),
+    "sh512400": ("有色ETF", 1.198),
 }
 
 #STOCK_DICT = {"sh562500": ("机器人ETF", 0.9),}
@@ -343,3 +381,6 @@ for stock_code, stock_obj in stock_object_dict.items():
 
 for stock_code, stock_obj in stock_object_dict.items():
     print(stock_obj.Drawdown())
+
+for stock_code, stock_obj in stock_object_dict.items():
+    print(stock_obj.FormatHistoryPrice())

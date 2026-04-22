@@ -88,6 +88,25 @@ export function TimeDuarion(dateStr1: string, dateStr2: string): number {
     return Math.abs(Math.floor((utc1 - utc2) / (1000 * 60 * 60 * 24)));
 }
 
+export function nYearsAgo(dateStr: string, n: number): string {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+        throw new Error("输入的日期格式不正确");
+    }
+    date.setFullYear(date.getFullYear() - n);
+    return date.toISOString().split("T")[0];
+}
+
+export function RecentDate(dateStr1: string, dateStr2: string): string {
+    const date1 = new Date(dateStr1);
+    const date2 = new Date(dateStr2);
+    if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+        throw new Error("输入的日期格式不正确");
+    }
+    return date1 > date2 ? dateStr1 : dateStr2;
+}
+
+
 export function AveragePriceStr(cost: number, count: number, single: number): string
 {
     if (count == 0)
@@ -102,6 +121,11 @@ export function StringPlus(num1: string, num2: string, single: number): string
     return String(MyFloor(Number(num1) + Number(num2), single));
 }
 
+export function StringMultiplied(num1:string, num2: string, single: number): string
+{
+    return String(MyFloor(Number(num1) * Number(num2), single));
+}
+
 export function ProportionPctStr(count: number, total: number, single: number): string
 {
     if (total == 0)
@@ -109,4 +133,29 @@ export function ProportionPctStr(count: number, total: number, single: number): 
         return total.toFixed(single) + "%";
     }
     return String((count / total * 100).toFixed(single)) + "%";
+}
+
+export function NextInterestDate(interest_year: number, step: number): string
+{
+    if (interest_year < 2025)
+    {
+        const now = new Date();
+        interest_year = now.getFullYear();
+    }
+    else
+    {
+        interest_year = interest_year + step;
+    }
+    
+    return `${interest_year}-10-01`;
+}
+
+export function GetTodayStr()
+{
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+        
+    return `${year}-${month}-${day}`;
 }

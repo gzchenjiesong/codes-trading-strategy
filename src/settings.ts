@@ -94,6 +94,11 @@ export class GridTradingSettings {
     LGRID_ADD_PCT: number;
     LGRID_RETAIN_COUNT: number;
 
+    INTEREST_YEAR: number;
+    INTEREST_RATE: number;
+    INTEREST_STEP: number;
+    INTEREST_TRIGGER: number;
+
     constructor()
     {
         // 按照默认参数值初始化
@@ -118,6 +123,11 @@ export class GridTradingSettings {
         this.LGRID_STEP_PCT = 0.52;
         this.LGRID_ADD_PCT = 0.5;
         this.LGRID_RETAIN_COUNT = 1;
+
+        this.INTEREST_YEAR = 2025;
+        this.INTEREST_RATE = 0.045;
+        this.INTEREST_STEP = 40;
+        this.INTEREST_TRIGGER = 0.85
     }
 
     Clone(): GridTradingSettings
@@ -168,8 +178,6 @@ export class GridTradingSettings {
         this.MIN_BATCH_COUNT = Number(strs[5]);
         this.MAX_RISE_PCT = Number(strs[6]);
         this.CLEAR_STEP_PCT = Number(strs[7]);
-        this.MINIMUM_BUY_PCT = Number(strs[8]);
-        this.BOTTOM_BUY_PCT = Number(strs[9]);
     }
 
     PackStep(): string
@@ -207,5 +215,25 @@ export class GridTradingSettings {
     UnpackQuant(strs: string [])
     {
 
+    }
+
+    PackInterest(): string
+    {
+        const setting = ["INTEREST", ];
+
+        return setting.join(",");
+        
+    }
+
+    UnpackInterest(strs: string [])
+    {
+        if (strs.length != 5)
+        {
+            return;
+        }
+        this.INTEREST_YEAR = Number(strs[1]);
+        this.INTEREST_RATE = Number(strs[2]);
+        this.INTEREST_STEP = Number(strs[3]);
+        this.INTEREST_TRIGGER = Number(strs[4]);
     }
 }

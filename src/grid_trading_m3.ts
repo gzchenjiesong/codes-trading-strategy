@@ -26,6 +26,7 @@ export class GridTradingModeThree extends GridTrading
             this.InitTradingTable();
             this.InitStockTable();
             this.InitTradingRecord();
+            this.InitTradingInterest();
             this.InitHoldingAnalysis();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
@@ -44,6 +45,7 @@ export class GridTradingModeThree extends GridTrading
             this.InitTradingTable();
             this.InitStockTable();
             this.InitTradingRecord();
+            this.InitTradingInterest();
             this.InitHoldingAnalysis();
             this.InitTradingIncome();
             this.InitTradingAnalysis();
@@ -60,6 +62,7 @@ export class GridTradingModeThree extends GridTrading
         this.disable_rows = []
         this.trading_table = []
         this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅", "止盈获利", "清仓获利"];
+        //this.trading_interest.push(["计息日期", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "持仓利率"]);
 
         const max_rise_pct = this.grid_settings.MAX_RISE_PCT;
         let grid_sell_pct = 1.0 + this.grid_settings.SGRID_STEP_PCT

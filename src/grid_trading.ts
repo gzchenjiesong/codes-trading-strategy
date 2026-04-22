@@ -3,11 +3,11 @@
     基类，不负责网格的交易计算，封装统一的接口
 */
 import { Md5 } from "ts-md5/dist/md5";
-import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings"
+import { GridTradingSettings, GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW, GRID_COLOR_SELL_MONITOR } from "./settings"
+import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_SELL_TRIGGERED } from "./settings";
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
-import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, ToPercentStr, ProportionPctStr, IsNumeric } from "./mymath";
+import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, NextInterestDate, ProportionPctStr, IsNumeric, AlignPrice, GetTodayStr, RecentDate, nYearsAgo } from "./mymath";
 import { PluginEnv } from "./plugin_env";
-import { clear } from "console";
 
 
 export class GridTrading 
@@ -19,6 +19,7 @@ export class GridTrading
     stock_table: string [][];
     param_table: string [][];
     trading_table: string [][];
+    trading_interest: string [][];
     trading_analysis: string [][];
     trading_record: string [][];
     trading_income: string [][];
@@ -47,6 +48,7 @@ export class GridTrading
     clear_avg_price: number;
     raw_trading_record: string [][];
     raw_adjust_record: string [][];
+    raw_interest_record: string [][];
     clear_sell_record: Map<string, number>;
     buy_grid_record: string [];
     sgrid_step_table: string [][];
@@ -149,8 +151,10 @@ export class GridTrading
         }
         // BASE,10000,0.67,0.005,0.001,100,0.1
         // STEP,0.05,0.05,4,0.22,0.2,2,0.52,0.5,1
+        // INTEREST,2023,0.045,40
         // ADJ,2025-03-24,调整首网价格,0.756->0.856,0.567,10000
         // BUY,2024-01-23,小网0,0.760,12000
+        // APY,2025-10-01,0.980,324568,0.720,13500,80%,0
         // CTRL,DEBUG
         this.is_debug = false;
         this.is_pause = false;
@@ -159,6 +163,7 @@ export class GridTrading
         this.grid_settings = this.plugin_env.grid_settings.Clone();
         this.raw_trading_record = [];
         this.raw_adjust_record = [];
+        this.raw_interest_record = [];
         this.buy_grid_record = [];
         this.sgrid_step_table = [];
         this.mgrid_step_table = [];
@@ -189,6 +194,14 @@ export class GridTrading
             if (strs[0] == "STEP")
             {
                 this.grid_settings.UnpackStep(strs);
+            }
+            if (strs[0] == "INTEREST")
+            {
+                this.grid_settings.UnpackInterest(strs);
+            }
+            if (strs[0] == "APY")
+            {
+                this.raw_interest_record.push([strs[1], strs[2], strs[3], strs[4], strs[5], strs[6], strs[7]]);
             }
             if (strs[0] == "SGRID")
             {
@@ -234,15 +247,31 @@ export class GridTrading
                     }
                 }
             }
-            if (strs[0] == "HIST")
-            {
-                if (strs[1] == "RANGE")
-                {
-                    
-                }
-            }
         }
         return true;
+    }
+
+    ParseHistData(hist_str: string)
+    {
+        const strs = hist_str.split(",");
+        this.grid_settings.BOTTOM_BUY_PCT = Number(strs[4]) / this.target_price;
+        this.grid_settings.MINIMUM_BUY_PCT = Number(strs[6]) / this.target_price;
+        this.InitStockTable();
+        this.hist_analysis = [["开始日期", "结束日期", "最低价", "最高价", "现价", "现价回撤", "现价涨幅", "首网价", "网格回撤",  "网格涨幅"],];
+        // 计算一年期间的回撤与涨幅
+        let min_price = Number(strs[4]);
+        let max_price = Number(strs[5]);
+        const start_date = RecentDate(strs[2], nYearsAgo(strs[3], 1));
+        this.hist_analysis.push([start_date, strs[3], strs[4], strs[5], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
+        // 计算五年期间的回撤与涨幅
+        min_price = Number(strs[6]);
+        max_price = Number(strs[7]);
+        const start_date5 = RecentDate(strs[2], nYearsAgo(strs[3], 5));
+        this.hist_analysis.push([start_date5, strs[3], strs[6], strs[7], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
+        // 计算全生命周期的回撤与涨幅
+        min_price = Number(strs[8]);
+        max_price = Number(strs[9]);
+        this.hist_analysis.push([strs[2], strs[3], strs[8], strs[9], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
     }
 
     InitTradingOverview()
@@ -456,7 +485,7 @@ export class GridTrading
                 adjust_count = 0;
             }
             adjust_cost = Math.ceil(adjust_price * adjust_count);
-            if (adjust_cost > 0)
+            if (adjust_cost != 0)
             {
                 this.adjust_record.push([this.raw_adjust_record[idx][0], this.raw_adjust_record[idx][1], this.raw_adjust_record[idx][2], adjust_price.toFixed(precision), String(adjust_count), String(adjust_cost)]);
             }
@@ -605,6 +634,62 @@ export class GridTrading
             }
             this.sell_triggered_rows.push(this.trading_table.length - 1);
         }
+    }
+
+    InitTradingInterest()
+    {
+        // APY,2025-10-01,0.980,324568,0.720,13500,80%,0
+        // 计息日期,当时首网价,当时持仓金额,买入价格,买入份数,止盈价位,卖出价格
+        // APY,2025-12-09,0.951,325700,0.754,50100,110%,0
+        this.trading_interest = [];
+        this.trading_interest.push([GRID_COLOR_STOCK_OVERVIEW, "计息日期", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
+                "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "年化收益"]);
+        for (let idx=0; idx<this.raw_interest_record.length; idx++)
+        {
+            const row = this.raw_interest_record[idx];
+            const fst_price = Number(row[1]);
+            const hold_count = Number(row[2]);
+            const buy_price = Number(row[3]);
+            const buy_count = Number(row[4]);
+            const profit_price_pct = ToNumber(row[5]);
+            const sell_price = Number(row[6]);
+            const profit_price = AlignPrice(fst_price * profit_price_pct, this.grid_settings.TRADING_PRICE_PRECISION)
+            const hold_cost = MyFloor(buy_price * hold_count, 1);
+            const buy_cost = MyFloor(buy_price * buy_count, 1);
+            let sell_price_str = "-";
+            let sell_gain = MyFloor(profit_price * buy_count, 1);
+            let color = GRID_COLOR_SELL_TRIGGERED;
+            if (this.current_price * (1.0 + this.grid_settings.MAX_RISE_PCT) >= profit_price)
+            {
+                color = GRID_COLOR_SELL_MONITOR;
+            }
+            if (sell_price > 0)
+            {
+                sell_price_str = row[6];
+                sell_gain = MyFloor(sell_price * buy_count, 1);
+                color = GRID_COLOR_BUY_TRIGGERED;
+            }
+            this.trading_interest.push([color, row[0], row[2], ToPercent(buy_price / fst_price, 0), row[3], row[4], String(buy_cost), ToPercent(buy_cost / hold_cost, 2),
+                    row[5], String(profit_price), sell_price_str, row[4], String(sell_gain), String(sell_gain - buy_cost), ToPercent((sell_gain - buy_cost) / hold_cost, 1)]);
+        }
+        if (this.total_hold <= 0 || this.current_price / this.target_price > this.grid_settings.INTEREST_TRIGGER)
+        {
+            return;
+        }
+        const next_date = NextInterestDate(this.grid_settings.INTEREST_YEAR, this.raw_interest_record.length);
+        const current_pct = this.current_price / this.target_price;
+        const profit_pct = (Math.floor(current_pct * 10) + 4) / 10.0;
+        const buy_count = MyFloor((this.total_hold * this.grid_settings.INTEREST_RATE) / (profit_pct / current_pct - 1.0) / this.current_price, this.grid_settings.MIN_BATCH_COUNT)
+        const sell_price = AlignPrice(this.target_price * profit_pct, this.grid_settings.TRADING_PRICE_PRECISION);
+        const sell_income = (sell_price - this.current_price) * buy_count;
+        let color = GRID_COLOR_STOCK_OVERVIEW;
+        if (GetTodayStr() > next_date)
+        {
+            color = GRID_COLOR_SELL_MONITOR;
+        }
+        this.trading_interest.push([color, "**" + next_date, String(this.total_hold), ToPercent(current_pct, 0), String(this.current_price), String(buy_count), (this.current_price * buy_count).toFixed(0),
+                ToPercent(this.current_price * buy_count / this.total_hold, 2), ToPercent(profit_pct, 0), String(sell_price), "-", String(buy_count), (sell_price * buy_count).toFixed(0),
+                sell_income.toFixed(0), ToPercent(sell_income / this.total_hold, 2)]);
     }
 
     InitTradingIncome()
@@ -859,8 +944,9 @@ export class GridTrading
 
     IsDisableRow(table_index: number)
     {
+        // 计算停止线的时候覆盖最低回撤价格的 5% 误差范围内
         const price_pct = ToNumber(this.trading_table[table_index][1]);
-        if (price_pct < this.grid_settings.MINIMUM_BUY_PCT)
+        if (price_pct < this.grid_settings.MINIMUM_BUY_PCT * 0.95)
         {
             return true;
         }

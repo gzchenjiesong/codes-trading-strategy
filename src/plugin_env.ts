@@ -8,6 +8,7 @@ import { DebugLog } from "./remote_util";
 import { GridTradingModeOne } from "./grid_trading_m1";
 import { GridTradingModeTwo } from "./grid_trading_m2";
 import { GridTradingModeThree } from "./grid_trading_m3";
+import { DripTrading } from "./drip_trading";
 
 export const UPDATE_STOCK_SETTING = "update_stock_setting";
 export const FETCH_CURRENT_PRICE = "fetch_current_price";
@@ -21,6 +22,7 @@ export class PluginEnv
     grid_settings: GridTradingSettings;
 
     grid_trading_dict: Map<string, GridTrading>;
+    drip_trading_dict: Map<string, DripTrading>;
     stock_remote_price_dict: Map<string, number>;
     event_callback_dict: Map<string, Map<number, Callback>>
     _event_guid: number;
@@ -32,6 +34,7 @@ export class PluginEnv
         this.base_settings = new PluginBaseSettings();
         this.grid_settings = new GridTradingSettings();
         this.grid_trading_dict = new Map<string, GridTrading>;
+        this.drip_trading_dict = new Map<string, DripTrading>;
         this.stock_remote_price_dict = new Map<string, number>;
         this.event_callback_dict = new Map<string, Map<number, Callback>>;
         this._event_guid = 0;
@@ -84,6 +87,18 @@ export class PluginEnv
         grid_trading = new trading_mode(this);
         this.grid_trading_dict.set(grid_name, grid_trading);
         return grid_trading;
+    }
+
+    GetAndGenDripTrading(drip_name: string)
+    {
+        let drip_trading = this.drip_trading_dict.get(drip_name)
+        if (drip_trading instanceof DripTrading)
+        {
+            return drip_trading;
+        }
+        drip_trading = new DripTrading(this);
+        this.drip_trading_dict.set(drip_name, drip_trading);
+        return drip_trading;
     }
 
     UnserializedSettings(data: string)

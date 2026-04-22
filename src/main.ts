@@ -10,6 +10,7 @@ import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
 import { CorView, VIEW_TYPE_COR } from './cor_view';
 import { PluginEnv, FETCH_CURRENT_PRICE } from './plugin_env';
 import { SETTING_NAME } from "./lang_str"
+import { DTVView, VIEW_TYPE_DTV } from './drip_view';
 
 
 export default class TradingStrategy extends Plugin
@@ -53,8 +54,13 @@ export default class TradingStrategy extends Plugin
             const cor_view = new CorView(leaf);
             return cor_view;
         })
+        this.registerView(VIEW_TYPE_DTV, (leaf: WorkspaceLeaf) => {
+            const dtv_view = new DTVView(leaf, this.plugin_env);
+            return dtv_view;
+        });
         this.registerExtensions(["gtv"], VIEW_TYPE_GTV);
         this.registerExtensions(["gto"], VIEW_TYPE_GTO);
+        this.registerExtensions(["dtv"], VIEW_TYPE_DTV);
         this.registerExtensions(["cor"], VIEW_TYPE_COR);
     }
 
@@ -87,6 +93,7 @@ export default class TradingStrategy extends Plugin
         const api_licence = this.plugin_env.GetAPILisence()
         const grid_folder = this.app.vault.getAbstractFileByPath('GridTrading');
         let price_cache = new Map<string, number>;
+        let hist_cache = new Map<string, string>;
         //DebugLog("getAbstractFileByPath ", String(grid_folder));
         if (grid_folder instanceof TFolder)
         {
@@ -114,6 +121,10 @@ export default class TradingStrategy extends Plugin
                         {
                             this.plugin_env.cash_balance = Number(strs[1]);
                         }
+                        if (strs[0] == 'HIST')
+                        {
+                            hist_cache.set(strs[1], lines[idx]);
+                        }
                     }
                 }
             }
@@ -126,13 +137,17 @@ export default class TradingStrategy extends Plugin
                     const content = await this.app.vault.cachedRead(grid_file);
                     const mode_str = content.split("\n")[0].split(",")[0];
                     let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
-                    //DebugLog("GetAndGenGridTrading, name: ", grid_file.name, ", mode: ", mode_str);
                     grid_trading.InitGridTrading(content);
+                    const full_name = grid_trading.market_code + String(grid_trading.target_stock);
+                    if (hist_cache.has(full_name))
+                    {
+                        grid_trading.ParseHistData(hist_cache.get(full_name)!);
+                    }
                     if (grid_trading.is_debug)
                     {
                         continue;
                     }
-                    let current_price = price_cache.get(grid_trading.market_code + String(grid_trading.target_stock));
+                    let current_price = price_cache.get(full_name);
                     if (current_price)
                     {
                         this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
@@ -159,18 +174,9 @@ export default class TradingStrategy extends Plugin
                     }
                     //DebugLog("Try to fetch remote price, ", grid_trading.market_code, grid_trading.target_stock);
                     let current_price = -1;
-                    if (grid_file.name.includes("LOF"))
-                    {
-                        current_price = await GetCurrentPriceFromSina(grid_trading.market_code + String(grid_trading.target_stock));
-                        current_price = Number(current_price);
-                    }
-                    else
-                    {
-                        current_price = await GetCurrentPriceFromSina(grid_trading.market_code + String(grid_trading.target_stock));
-                        // PS: 需要强转一下，不强制转换无法使用 toFixed 函数，可能是类型问题，没深究
-                        current_price = Number(current_price);
-                        await sleep(10);
-                    }
+                    current_price = await GetCurrentPriceFromSina(grid_trading.market_code + String(grid_trading.target_stock));
+                    current_price = Number(current_price);
+                    await sleep(10);
                     if (current_price < 0)
                     {
                         continue;
@@ -178,6 +184,21 @@ export default class TradingStrategy extends Plugin
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
                     //DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);
+                }
+                if (grid_file instanceof TFile && grid_file.name.endsWith(".dtv"))
+                {
+                    const content = await this.app.vault.cachedRead(grid_file);
+                    let drip_trading = this.plugin_env.GetAndGenDripTrading(grid_file.name);
+                    const result = drip_trading.ParseRawData(content);
+                    const stock_code_list = drip_trading.GetStockCodeList();
+                    for (const stock_code of stock_code_list) {
+                        const current_price = await GetCurrentPriceFromSina(stock_code);
+                        await sleep(10);
+                        if (current_price < 0) {
+                            continue;
+                        }
+                        this.plugin_env.stock_remote_price_dict.set(stock_code, current_price);
+                    }
                 }
             }
             this.plugin_env.PublishEvent(FETCH_CURRENT_PRICE);

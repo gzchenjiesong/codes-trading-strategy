@@ -22,6 +22,7 @@ export class GTOView extends TextFileView
     stock_filled_overview: string [][];
     income_overview: string [][];
     holding_overview: string [][];
+    interest_overview: string [][];
     mgrid_buy_total_cost: number;
     lgrid_buy_total_cost: number;
     active_stock_count: number;
@@ -40,6 +41,8 @@ export class GTOView extends TextFileView
     holding_table_el: HTMLElement;
     debug_log_title_el: HTMLElement;
     debug_log_table_el: HTMLElement;
+    interest_title_el: HTMLElement;
+    interest_table_el: HTMLElement;
 
     constructor(leaf: WorkspaceLeaf, vault: Vault, plugin_env: PluginEnv)
     {
@@ -53,6 +56,7 @@ export class GTOView extends TextFileView
         this.custom_stock_overview = [];
         this.income_overview = [];
         this.holding_overview = [];
+        this.interest_overview = [];
     }
 
     ReadCustomStock()
@@ -85,6 +89,8 @@ export class GTOView extends TextFileView
         let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
         let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
         let active_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"]];
+        this.interest_overview = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "计息时间", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
+                "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "年化收益"]];
         const grid_folder = this.vault.getAbstractFileByPath('GridTrading');
         let grid_file_names: string [] = [];
         if (grid_folder instanceof TFolder)
@@ -146,6 +152,13 @@ export class GTOView extends TextFileView
                     this.holding_overview[idx][3] = StringPlus(this.holding_overview[idx][3], trading_holding[idx][6], 1);
                     this.holding_overview[idx][4] = StringPlus(this.holding_overview[idx][4], trading_holding[idx][7], 1);
                     this.holding_overview[idx][5] = StringPlus(this.holding_overview[idx][5], trading_holding[idx][8], 1);
+                }
+                // 处理红利网格信息
+                const trading_interest = grid_trading.trading_interest;
+                if (trading_interest.length > 1 && trading_interest[trading_interest.length - 1][1].startsWith("**"))
+                {
+                    let interest_info = [trading_interest[trading_interest.length - 1][0], grid_trading.target_stock.toString(), grid_trading.stock_name, ...trading_interest[trading_interest.length - 1].slice(1)];
+                    this.interest_overview.push(interest_info);
                 }
             }
         }
@@ -374,6 +387,10 @@ export class GTOView extends TextFileView
         this.custom_table_el = div.createEl("table");
 
         div = this.contentEl.createEl("div");
+        this.interest_title_el = div.createEl("h1");
+        this.interest_table_el = div.createEl("table");
+
+        div = this.contentEl.createEl("div");
         this.filled_tile_el = div.createEl("h1");
         this.filled_table_el = div.createEl("table");
 
@@ -418,6 +435,11 @@ export class GTOView extends TextFileView
         this.custom_title_el.setText("我的网格");
         this.custom_table_el.empty();
         this.DisplayTable(this.custom_table_el, this.custom_stock_overview, true);
+
+        // 红利网格
+        this.interest_title_el.setText("计息网格");
+        this.interest_table_el.empty();
+        this.DisplayTable(this.interest_table_el, this.interest_overview, true);
 
         // 补仓/加仓信息
         this.filled_tile_el.setText("补仓信息");
