@@ -181,7 +181,8 @@ export class GridTrading
             if (strs[0] == "SELL")
             {
                 this.raw_trading_record.push([strs[0], strs[1], strs[2], strs[3], strs[4]]);
-                this.buy_grid_record.remove(strs[2]);
+                const i = this.buy_grid_record.indexOf(strs[2]);
+                if (i >= 0) this.buy_grid_record.splice(i, 1);
             }
             if (strs[0] == "SHARE")
             {

@@ -51,7 +51,7 @@ export function SetSettingValue<T, VT>(settings: T, key: keyof T, value: VT)
 {
     if (key in settings)
     {
-        settings[key] = value;
+        (settings as Record<string, unknown>)[key as string] = value;
     }
 }
 
@@ -62,10 +62,7 @@ export class PluginBaseSettings
 
     constructor()
     {
-        // 免费默认License
-        this.DATA_API_LICENCE = "112e84656174f0a5";
-        // 个人付费License
-        this.DATA_API_LICENCE = "b192f53a6d6928033";
+        this.DATA_API_LICENCE = "";
     }
 }
 

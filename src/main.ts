@@ -4,13 +4,12 @@
 */
 import { App, Plugin, PluginSettingTab, PluginManifest, Setting, WorkspaceLeaf, TFile, TFolder } from 'obsidian';
 import { GridTradingSettings, PluginBaseSettings, SetSettingValue, GetSettingValue } from "./settings"
-import { GetETFCurrentPrice, GetLOFCurrentPrice, GetCurrentPriceFromSina, DebugLog } from './remote_util';
+import { GetCurrentPriceFromTencent, DebugLog } from './remote_util';
 import { GTVView, VIEW_TYPE_GTV } from "./grid_view"
 import { GTOView, VIEW_TYPE_GTO } from './grid_overview';
 import { CorView, VIEW_TYPE_COR } from './cor_view';
 import { PluginEnv, FETCH_CURRENT_PRICE } from './plugin_env';
 import { SETTING_NAME } from "./lang_str"
-import { DTVView, VIEW_TYPE_DTV } from './drip_view';
 
 
 export default class TradingStrategy extends Plugin
@@ -38,8 +37,8 @@ export default class TradingStrategy extends Plugin
         // This adds a settings tab so the user can configure various aspects of the plugin
         this.addSettingTab(new TradingStrategySettingTab(this.app, this, this.plugin_env));
 
-        // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-        this.interval_callback_id = window.setInterval(() => this.FetchAllStockCurrentPrice(), 1 * 1000);
+        // 轮询当前价：60 秒一次（腾讯接口免费，避免限流）
+        this.interval_callback_id = window.setInterval(() => this.FetchAllStockCurrentPrice(), 60 * 1000);
         this.registerInterval(this.interval_callback_id);
 
         this.registerView(VIEW_TYPE_GTV, (leaf: WorkspaceLeaf) => {
@@ -54,13 +53,8 @@ export default class TradingStrategy extends Plugin
             const cor_view = new CorView(leaf);
             return cor_view;
         })
-        this.registerView(VIEW_TYPE_DTV, (leaf: WorkspaceLeaf) => {
-            const dtv_view = new DTVView(leaf, this.plugin_env);
-            return dtv_view;
-        });
         this.registerExtensions(["gtv"], VIEW_TYPE_GTV);
         this.registerExtensions(["gto"], VIEW_TYPE_GTO);
-        this.registerExtensions(["dtv"], VIEW_TYPE_DTV);
         this.registerExtensions(["cor"], VIEW_TYPE_COR);
     }
 
@@ -71,7 +65,6 @@ export default class TradingStrategy extends Plugin
     async LoadSettingsFromDisk()
     {
         const setting_data = await this.loadData();
-        //DebugLog("Finish loading setting, setting_data: ", setting_data);
         if (setting_data != null)
         {
             this.plugin_env.UnserializedSettings(setting_data);
@@ -80,32 +73,22 @@ export default class TradingStrategy extends Plugin
 
     SaveSettingsToDisk()
     {
-        DebugLog("MAX_SLUMP_PCT1 ", this.plugin_env.grid_settings.MAX_SLUMP_PCT);
         const setting_data = this.plugin_env.SerializedSettings();
-        DebugLog("MAX_SLUMP_PCT2 ", this.plugin_env.grid_settings.MAX_SLUMP_PCT);
-        DebugLog(setting_data);
         this.saveData(setting_data);
     }
 
     async FetchAllStockCurrentPrice()
     {
-        //DebugLog('run FetchAllStockCurrentPrice ', this.app.vault.getName());
-        const api_licence = this.plugin_env.GetAPILisence()
         const grid_folder = this.app.vault.getAbstractFileByPath('网格策略');
         let price_cache = new Map<string, number>;
         let hist_cache = new Map<string, string>;
-        //DebugLog("getAbstractFileByPath ", String(grid_folder));
         if (grid_folder instanceof TFolder)
         {
-            if (this.interval_callback_id > 0)
-            {
-                window.clearInterval(this.interval_callback_id);
-                this.interval_callback_id = -1;
-            }
+            // 首次成功解析后停止轮询重建（保留 interval，仅避免重复 clear）
             for (let index=0; index < grid_folder.children.length; index++)
             {
                 const grid_file = grid_folder.children[index];
-                
+
                 if (grid_file instanceof TFile && grid_file.name.endsWith(".gto"))
                 {
                     const content = await this.app.vault.cachedRead(grid_file);
@@ -131,7 +114,7 @@ export default class TradingStrategy extends Plugin
             for (let index=0; index < grid_folder.children.length; index++)
             {
                 const grid_file = grid_folder.children[index];
-            
+
                 if (grid_file instanceof TFile && grid_file.name.endsWith(".gtv"))
                 {
                     const content = await this.app.vault.cachedRead(grid_file);
@@ -155,50 +138,29 @@ export default class TradingStrategy extends Plugin
                     }
                 }
             }
-            //DebugLog('Folder children count ', String(grid_folder.children.length));
-            
+
             for (let index=0; index < grid_folder.children.length; index++)
             {
                 const grid_file = grid_folder.children[index];
                 if (grid_file instanceof TFile && grid_file.name.endsWith(".gtv"))
                 {
-                    //DebugLog("read file ", grid_file.name);
                     const content = await this.app.vault.cachedRead(grid_file);
                     const mode_str = content.split("\n")[0].split(",")[0];
                     let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
-                    //DebugLog("GetAndGenGridTrading, name: ", grid_file.name, ", mode: ", mode_str);
                     grid_trading.InitGridTrading(content);
                     if (grid_trading.is_debug)
                     {
                         continue;
                     }
-                    //DebugLog("Try to fetch remote price, ", grid_trading.market_code, grid_trading.target_stock);
                     let current_price = -1;
-                    current_price = await GetCurrentPriceFromSina(grid_trading.market_code + String(grid_trading.target_stock));
+                    current_price = await GetCurrentPriceFromTencent(grid_trading.market_code + String(grid_trading.target_stock));
                     current_price = Number(current_price);
-                    await sleep(10);
                     if (current_price < 0)
                     {
                         continue;
                     }
                     this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
-                    //DebugLog("查询 ", grid_trading.stock_name, " 当前最新价格为: ", current_price);
                     grid_trading.UpdateRemotePrice(current_price);
-                }
-                if (grid_file instanceof TFile && grid_file.name.endsWith(".dtv"))
-                {
-                    const content = await this.app.vault.cachedRead(grid_file);
-                    let drip_trading = this.plugin_env.GetAndGenDripTrading(grid_file.name);
-                    const result = drip_trading.ParseRawData(content);
-                    const stock_code_list = drip_trading.GetStockCodeList();
-                    for (const stock_code of stock_code_list) {
-                        const current_price = await GetCurrentPriceFromSina(stock_code);
-                        await sleep(10);
-                        if (current_price < 0) {
-                            continue;
-                        }
-                        this.plugin_env.stock_remote_price_dict.set(stock_code, current_price);
-                    }
                 }
             }
             this.plugin_env.PublishEvent(FETCH_CURRENT_PRICE);
@@ -228,7 +190,6 @@ class TradingStrategySettingTab extends PluginSettingTab {
     }
 
     display(): void {
-        //DebugLog("enter display settings")
         // 清空
         this.containerEl.empty();
         // 设置标题
@@ -254,7 +215,7 @@ class TradingStrategySettingTab extends PluginSettingTab {
         }
         // 网格交易参数
         const grid_div = this.containerEl.createEl("div");
-        grid_div.createEl("h2").setText("网格配置");   
+        grid_div.createEl("h2").setText("网格配置");
         let key: (keyof GridTradingSettings);
         for (key in this.plugin_env.grid_settings)
         {
@@ -263,11 +224,9 @@ class TradingStrategySettingTab extends PluginSettingTab {
             {
                 const setting = new Setting(grid_div).setName(key_name);
                 setting.addText((text_comp, setting_key=key) => {
-                    DebugLog("add Setting Key: ", setting_key);
                     text_comp.setValue(String(GetSettingValue(this.plugin_env.grid_settings, setting_key)));
                     text_comp.onChange((value: string) => {
                             SetSettingValue(this.plugin_env.grid_settings, setting_key, Number(value));
-                            DebugLog("SetValue succeed ", setting_key, GetSettingValue(this.plugin_env.grid_settings, setting_key));
                             this.plugin_env.is_settings_changed = true;
                     });
                 });
@@ -275,4 +234,3 @@ class TradingStrategySettingTab extends PluginSettingTab {
         }
     }
 }
-

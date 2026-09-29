@@ -1,131 +1,48 @@
 /*
-    数据来源: 必盈数据(https://ad.biyingapi.com/apidoc.html)
-    数据范围:
-        沪深基础数据: 股票列表、公司详情、实时交易、历史数据、涨跌股池、资金流向等60余个不同类型的数据接口
-        沪深深度数据: 投资参考、龙虎榜、市场表现、财务分析、机构持股、资金流等80余个向个不同类型的数据接口
-        沪深指数数据: 沪深指数列表、实时交易、历史数据、分时KDJ、分时MACD、分时BOLL等16个不同类型的数据接口
-        基金行情数据: 基金列表、估值行情、最新K线、历史K线、资产负债表、档案信息等70余个不同类型的数据接口
-    数据接口:
-        ETF基金行情
-            API接口：https://api.biyingapi.com/jj/etfhq/ETF基金代码/您的licence
-            备用接口：https://api1.biyingapi.com/jj/etfhq/ETF基金代码/您的licence
-        LOF基金行情
-            API接口：https://api.biyingapi.com/jj/lofhq/LOF基金代码/您的licence
-            备用接口：https://api1.biyingapi.com/jj/lofhq/LOF基金代码/您的licence
+    数据来源: 腾讯行情 qt.gtimg.cn
+    ETF/LOF/指数当前价: https://qt.gtimg.cn/q=<市场><代码>  (GBK 编码)
+    返回格式: v_sh513180="1~名称~代码~现价~昨收~今开~...";
+    字段用 ~ 分隔, 现价在 index 3
 */
-import { Notice, requestUrl } from "obsidian";
-
-const data_url_prefix = "http://api.biyingapi.com";
+import { requestUrl } from "obsidian";
 
 
-async function FetchData(data_api: string, api_licence: string, debug_log: string[][])
+export async function GetCurrentPriceFromTencent(etf_code: string): Promise<number>
 {
-    const url = data_url_prefix + data_api + "/" + api_licence;
-    debug_log.push(["Info", "full url", url]);
-    const response = await requestUrl(url);
-    return response.json;
-}
-
-
-export async function GetCurrentPriceFromSina(etf_code: string, retry_count = 3)
-{
-    const data_api = "https://hq.sinajs.cn/list=" + etf_code;
-    let current_price = -1;
+    // etf_code 形如 "sh513180" / "sz159869"
+    const data_api = "https://qt.gtimg.cn/q=" + etf_code;
     try
     {
-        // 使用 Obsidian 提供的 requestUrl 方法发起请求
         const response = await requestUrl({
             url: data_api,
             method: "GET",
             headers: {
-                referer: "https://finance.sina.com.cn/",
+                referer: "https://gu.qq.com/",
             },
         });
 
-        // 解码内容
-        let content = response.text;
-        try {
-            // 用 gbk 解码（在 JS 中，需使用 TextDecoder）
-            const gbkDecoder = new TextDecoder("gbk");
-            const uint8Array = new TextEncoder().encode(content); // 将内容转为字节数组
-            content = gbkDecoder.decode(uint8Array);
-        } catch (error) {
-            // 如果解码失败，则使用默认 UTF-8
-            console.warn("Fallback to UTF-8 decoding.", error);
-        }
-        // 处理价格
+        // 腾讯返回 GBK, requestUrl 按 UTF-8 解析会导致中文乱码,
+        // 但价格字段(数字)与分隔符 ~ 不受影响, 直接按 ~ 切分取 index 3 即可
+        const content = response.text;
         const contents = content.trim().split("\n");
-        current_price = Number(contents[0].split(",")[3]);
-        DebugLog(etf_code, " : ", String(current_price))
+        const strs = contents[0].split("~");
+        const current_price = Number(strs[3]);
+        return current_price;
     }
     catch (error)
     {
-        DebugLog(etf_code,  " get price failed ", error.message);
+        console.warn("GetCurrentPriceFromTencent failed", etf_code, error);
     }
 
-    return current_price;
-}
-
-
-export async function GetETFCurrentPrice(etf_code: string, api_licence: string, retry_count = 3)
-{
-    if (!(etf_code.startsWith("sz") || etf_code.startsWith("sh")))
-    {
-        // 非sz/sh市场的ETF价格无法自动获取
-        return -1;
-    }
-    const data_api = data_url_prefix + "/jj/etfhq/" + etf_code + "/" + api_licence;
-    //DebugLog("request url: ", data_api);
-
-    while (retry_count >= 0)
-    {
-        try
-        {
-            const response = await requestUrl(data_api);
-            DebugLog("request ", etf_code, "  result ", response.json["zxj"]);
-            return response.json["zxj"];
-        }
-        catch(e)
-        {
-            DebugLog("request ", data_api, "  error ", e.message);
-            await sleep(30 * 1000);
-        }
-        retry_count = retry_count - 1;
-    }
     return -1;
 }
 
-export async function GetLOFCurrentPrice(lof_code: string, api_licence: string, retry_count = 3)
-{
-    if (!(lof_code.startsWith("sz") || lof_code.startsWith("sh")))
-    {
-        // 非sz/sh市场的LOF价格无法自动获取
-        return -1;
-    }
-    const data_api = data_url_prefix + "/jj/lofhq/" + lof_code + "/" + api_licence;
-    //DebugLog("request url: ", data_api);
-    while (retry_count >= 0)
-    {
-        try
-        {
-            const response = await requestUrl(data_api);
-            DebugLog("request ", lof_code, "  result ", response.json["zxj"]);
-            return response.json["zxj"];
-        }
-        catch(e)
-        {
-            DebugLog("request ", data_api, "  error ", e.message);
-            await sleep(30 * 1000);
-        }
-    }
-    return -1;
-}
 
-export function DebugLog(...args)
+export function DebugLog(...args: unknown[])
 {
     let log_str = "";
-    args.forEach((cell, i) => {
+    args.forEach((cell) => {
         log_str = log_str + String(cell);
     });
-    new Notice(log_str);
+    console.log(log_str);
 }

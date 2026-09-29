@@ -142,7 +142,8 @@ export class GridTradingModeThree extends GridTrading
             const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
             if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct))
             {
-                this.sell_triggered_rows.remove(last_sell_m);
+                const i = this.sell_triggered_rows.indexOf(last_sell_m);
+                if (i >= 0) this.sell_triggered_rows.splice(i, 1);
                 this.sell_monitor_rows.push(last_sell_m);
             }
         }
@@ -179,7 +180,8 @@ export class GridTradingModeThree extends GridTrading
             const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
             if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct))
             {
-                this.sell_triggered_rows.remove(last_sell_l);
+                const i = this.sell_triggered_rows.indexOf(last_sell_l);
+                if (i >= 0) this.sell_triggered_rows.splice(i, 1);
                 this.sell_monitor_rows.push(last_sell_l);
             }
         }

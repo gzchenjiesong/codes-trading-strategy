@@ -40,10 +40,10 @@ var require_md5 = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Md5 = void 0;
-    var Md53 = (
+    var Md52 = (
       /** @class */
       function() {
-        function Md54() {
+        function Md53() {
           this._dataLength = 0;
           this._bufferLength = 0;
           this._state = new Int32Array(4);
@@ -52,21 +52,21 @@ var require_md5 = __commonJS({
           this._buffer32 = new Uint32Array(this._buffer, 0, 17);
           this.start();
         }
-        Md54.hashStr = function(str, raw) {
+        Md53.hashStr = function(str, raw) {
           if (raw === void 0) {
             raw = false;
           }
           return this.onePassHasher.start().appendStr(str).end(raw);
         };
-        Md54.hashAsciiStr = function(str, raw) {
+        Md53.hashAsciiStr = function(str, raw) {
           if (raw === void 0) {
             raw = false;
           }
           return this.onePassHasher.start().appendAsciiStr(str).end(raw);
         };
-        Md54._hex = function(x) {
-          var hc = Md54.hexChars;
-          var ho = Md54.hexOut;
+        Md53._hex = function(x) {
+          var hc = Md53.hexChars;
+          var ho = Md53.hexOut;
           var n;
           var offset;
           var j;
@@ -83,7 +83,7 @@ var require_md5 = __commonJS({
           }
           return ho.join("");
         };
-        Md54._md5cycle = function(x, k) {
+        Md53._md5cycle = function(x, k) {
           var a = x[0];
           var b = x[1];
           var c = x[2];
@@ -221,13 +221,13 @@ var require_md5 = __commonJS({
           x[2] = c + x[2] | 0;
           x[3] = d + x[3] | 0;
         };
-        Md54.prototype.start = function() {
+        Md53.prototype.start = function() {
           this._dataLength = 0;
           this._bufferLength = 0;
-          this._state.set(Md54.stateIdentity);
+          this._state.set(Md53.stateIdentity);
           return this;
         };
-        Md54.prototype.appendStr = function(str) {
+        Md53.prototype.appendStr = function(str) {
           var buf8 = this._buffer8;
           var buf32 = this._buffer32;
           var bufLen = this._bufferLength;
@@ -256,7 +256,7 @@ var require_md5 = __commonJS({
             }
             if (bufLen >= 64) {
               this._dataLength += 64;
-              Md54._md5cycle(this._state, buf32);
+              Md53._md5cycle(this._state, buf32);
               bufLen -= 64;
               buf32[0] = buf32[16];
             }
@@ -264,7 +264,7 @@ var require_md5 = __commonJS({
           this._bufferLength = bufLen;
           return this;
         };
-        Md54.prototype.appendAsciiStr = function(str) {
+        Md53.prototype.appendAsciiStr = function(str) {
           var buf8 = this._buffer8;
           var buf32 = this._buffer32;
           var bufLen = this._bufferLength;
@@ -279,13 +279,13 @@ var require_md5 = __commonJS({
               break;
             }
             this._dataLength += 64;
-            Md54._md5cycle(this._state, buf32);
+            Md53._md5cycle(this._state, buf32);
             bufLen = 0;
           }
           this._bufferLength = bufLen;
           return this;
         };
-        Md54.prototype.appendByteArray = function(input) {
+        Md53.prototype.appendByteArray = function(input) {
           var buf8 = this._buffer8;
           var buf32 = this._buffer32;
           var bufLen = this._bufferLength;
@@ -300,13 +300,13 @@ var require_md5 = __commonJS({
               break;
             }
             this._dataLength += 64;
-            Md54._md5cycle(this._state, buf32);
+            Md53._md5cycle(this._state, buf32);
             bufLen = 0;
           }
           this._bufferLength = bufLen;
           return this;
         };
-        Md54.prototype.getState = function() {
+        Md53.prototype.getState = function() {
           var s = this._state;
           return {
             buffer: String.fromCharCode.apply(null, Array.from(this._buffer8)),
@@ -315,7 +315,7 @@ var require_md5 = __commonJS({
             state: [s[0], s[1], s[2], s[3]]
           };
         };
-        Md54.prototype.setState = function(state) {
+        Md53.prototype.setState = function(state) {
           var buf = state.buffer;
           var x = state.state;
           var s = this._state;
@@ -330,7 +330,7 @@ var require_md5 = __commonJS({
             this._buffer8[i] = buf.charCodeAt(i);
           }
         };
-        Md54.prototype.end = function(raw) {
+        Md53.prototype.end = function(raw) {
           if (raw === void 0) {
             raw = false;
           }
@@ -342,10 +342,10 @@ var require_md5 = __commonJS({
           var dataBitsLen = this._dataLength * 8;
           buf8[bufLen] = 128;
           buf8[bufLen + 1] = buf8[bufLen + 2] = buf8[bufLen + 3] = 0;
-          buf32.set(Md54.buffer32Identity.subarray(i), i);
+          buf32.set(Md53.buffer32Identity.subarray(i), i);
           if (bufLen > 55) {
-            Md54._md5cycle(this._state, buf32);
-            buf32.set(Md54.buffer32Identity);
+            Md53._md5cycle(this._state, buf32);
+            buf32.set(Md53.buffer32Identity);
           }
           if (dataBitsLen <= 4294967295) {
             buf32[14] = dataBitsLen;
@@ -359,19 +359,19 @@ var require_md5 = __commonJS({
             buf32[14] = lo;
             buf32[15] = hi;
           }
-          Md54._md5cycle(this._state, buf32);
-          return raw ? this._state : Md54._hex(this._state);
+          Md53._md5cycle(this._state, buf32);
+          return raw ? this._state : Md53._hex(this._state);
         };
-        Md54.stateIdentity = new Int32Array([1732584193, -271733879, -1732584194, 271733878]);
-        Md54.buffer32Identity = new Int32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        Md54.hexChars = "0123456789abcdef";
-        Md54.hexOut = [];
-        Md54.onePassHasher = new Md54();
-        return Md54;
+        Md53.stateIdentity = new Int32Array([1732584193, -271733879, -1732584194, 271733878]);
+        Md53.buffer32Identity = new Int32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        Md53.hexChars = "0123456789abcdef";
+        Md53.hexOut = [];
+        Md53.onePassHasher = new Md53();
+        return Md53;
       }()
     );
-    exports.Md5 = Md53;
-    if (Md53.hashStr("hello") !== "5d41402abc4b2a76b9719d911017c592") {
+    exports.Md5 = Md52;
+    if (Md52.hashStr("hello") !== "5d41402abc4b2a76b9719d911017c592") {
       throw new Error("Md5 self test failed.");
     }
   }
@@ -383,7 +383,7 @@ __export(main_exports, {
   default: () => TradingStrategy
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/lang_str.ts
 var SETTING_NAME = /* @__PURE__ */ new Map([
@@ -446,8 +446,7 @@ function SetSettingValue(settings, key, value) {
 }
 var PluginBaseSettings = class {
   constructor() {
-    this.DATA_API_LICENCE = "112e84656174f0a5";
-    this.DATA_API_LICENCE = "b192f53a6d6928033";
+    this.DATA_API_LICENCE = "";
   }
 };
 var GridTradingSettings = class {
@@ -576,39 +575,32 @@ var GridTradingSettings = class {
 
 // src/remote_util.ts
 var import_obsidian = require("obsidian");
-async function GetCurrentPriceFromSina(etf_code, retry_count = 3) {
-  const data_api = "https://hq.sinajs.cn/list=" + etf_code;
-  let current_price = -1;
+async function GetCurrentPriceFromTencent(etf_code) {
+  const data_api = "https://qt.gtimg.cn/q=" + etf_code;
   try {
     const response = await (0, import_obsidian.requestUrl)({
       url: data_api,
       method: "GET",
       headers: {
-        referer: "https://finance.sina.com.cn/"
+        referer: "https://gu.qq.com/"
       }
     });
-    let content = response.text;
-    try {
-      const gbkDecoder = new TextDecoder("gbk");
-      const uint8Array = new TextEncoder().encode(content);
-      content = gbkDecoder.decode(uint8Array);
-    } catch (error) {
-      console.warn("Fallback to UTF-8 decoding.", error);
-    }
+    const content = response.text;
     const contents = content.trim().split("\n");
-    current_price = Number(contents[0].split(",")[3]);
-    DebugLog(etf_code, " : ", String(current_price));
+    const strs = contents[0].split("~");
+    const current_price = Number(strs[3]);
+    return current_price;
   } catch (error) {
-    DebugLog(etf_code, " get price failed ", error.message);
+    console.warn("GetCurrentPriceFromTencent failed", etf_code, error);
   }
-  return current_price;
+  return -1;
 }
 function DebugLog(...args) {
   let log_str = "";
-  args.forEach((cell, i) => {
+  args.forEach((cell) => {
     log_str = log_str + String(cell);
   });
-  new import_obsidian.Notice(log_str);
+  console.log(log_str);
 }
 
 // src/grid_view.ts
@@ -793,7 +785,9 @@ var GridTrading = class {
       }
       if (strs2[0] == "SELL") {
         this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
-        this.buy_grid_record.remove(strs2[2]);
+        const i = this.buy_grid_record.indexOf(strs2[2]);
+        if (i >= 0)
+          this.buy_grid_record.splice(i, 1);
       }
       if (strs2[0] == "SHARE") {
         this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
@@ -1697,7 +1691,9 @@ var GridTradingModeOne = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1) {
       const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_m);
+        const i = this.sell_triggered_rows.indexOf(last_sell_m);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_m);
       }
     }
@@ -1724,7 +1720,9 @@ var GridTradingModeOne = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] > scount + 1 + mcount) {
       const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_l);
+        const i = this.sell_triggered_rows.indexOf(last_sell_l);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_l);
       }
     }
@@ -1891,7 +1889,9 @@ var GridTradingModeTwo = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] >= start_index) {
       const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_m);
+        const i = this.sell_triggered_rows.indexOf(last_sell_m);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_m);
       }
     }
@@ -1926,7 +1926,9 @@ var GridTradingModeTwo = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] >= start_index) {
       const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_l);
+        const i = this.sell_triggered_rows.indexOf(last_sell_l);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_l);
       }
     }
@@ -2071,7 +2073,9 @@ var GridTradingModeThree = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] >= start_index) {
       const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_m);
+        const i = this.sell_triggered_rows.indexOf(last_sell_m);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_m);
       }
     }
@@ -2102,7 +2106,9 @@ var GridTradingModeThree = class extends GridTrading {
     if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] >= start_index) {
       const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct)) {
-        this.sell_triggered_rows.remove(last_sell_l);
+        const i = this.sell_triggered_rows.indexOf(last_sell_l);
+        if (i >= 0)
+          this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_l);
       }
     }
@@ -2136,171 +2142,6 @@ var GridTradingModeThree = class extends GridTrading {
   }
 };
 
-// src/drip_trading.ts
-var import_md52 = __toESM(require_md5());
-var DividendStock = class {
-  constructor(stock_code, stock_name, market_code, current_price) {
-    this.stock_code = stock_code;
-    this.stock_name = stock_name;
-    this.market_code = market_code;
-    this.current_price = current_price;
-    this.ResetStats();
-  }
-  ResetStats() {
-    this.trading_record = [];
-    this.total_buy_count = 0;
-    this.total_buy_cost = 0;
-    this.drip_buy_count = 0;
-    this.drip_buy_cost = 0;
-    this.total_dividend_earned = 0;
-    this.recent_dividend_amount = 0;
-    this.total_dividend_count = 0;
-    this.total_dividend_amount = 0;
-  }
-  ParseRawData(strs) {
-    if (strs[0] === "STOCK") {
-      this.stock_code = parseInt(strs[1]);
-      this.stock_name = strs[2];
-      this.market_code = strs[3];
-      this.dividend_cycle = strs[4];
-      this.issue_date = strs[5];
-      this.fund_size = strs[6];
-      this.tracking_index = strs[7];
-      this.recent_dividend_date = strs[8];
-      this.recent_dividend_amount = parseFloat(strs[9]);
-      this.total_dividend_count = parseInt(strs[10]);
-      this.total_dividend_amount = parseFloat(strs[11]);
-    }
-    if (strs[0] === "BBUY") {
-      const buy_count = parseInt(strs[4]);
-      const buy_price = parseFloat(strs[3]);
-      this.total_buy_count += buy_count;
-      this.total_buy_cost += buy_count * buy_price;
-      this.trading_record.push([this.stock_code.toString(), this.stock_name, "\u672C\u91D1\u4E70\u5165", strs[2], strs[3], strs[4], (buy_count * buy_price).toFixed(0)]);
-    }
-    if (strs[0] === "SBUY") {
-      const buy_count = parseInt(strs[4]);
-      const buy_price = parseFloat(strs[3]);
-      this.drip_buy_count += buy_count;
-      this.drip_buy_cost += buy_count * buy_price;
-      this.trading_record.push([this.stock_code.toString(), this.stock_name, "\u5206\u7EA2\u518D\u6295", strs[2], strs[3], strs[4], (buy_count * buy_price).toFixed(0)]);
-    }
-    if (strs[0] === "SELL") {
-      const sell_count = parseInt(strs[4]);
-      const sell_price = parseFloat(strs[3]);
-      this.total_buy_count -= sell_count;
-      this.total_buy_cost -= sell_count * sell_price;
-      this.trading_record.push([this.stock_code.toString(), this.stock_name, "\u6301\u4ED3\u5356\u51FA", strs[2], strs[3], strs[4], (sell_count * sell_price).toFixed(0)]);
-    }
-    if (strs[0] === "SHARE") {
-      const dividend_amount = parseFloat(strs[3]);
-      this.total_dividend_earned += dividend_amount;
-      this.trading_record.push([this.stock_code.toString(), this.stock_name, "\u5206\u7EA2\u5230\u8D26", strs[2], "0", "0", dividend_amount.toFixed(2)]);
-    }
-  }
-  InitStockOverview(current_price) {
-    this.current_price = current_price;
-    this.stock_overview = [
-      this.stock_code.toString(),
-      this.stock_name,
-      this.dividend_cycle,
-      this.issue_date,
-      this.fund_size,
-      this.tracking_index,
-      this.recent_dividend_date,
-      this.recent_dividend_amount.toFixed(4),
-      this.total_dividend_count.toString(),
-      this.total_dividend_amount.toFixed(4)
-    ];
-    const total_count = this.total_buy_count + this.drip_buy_count;
-    if (total_count <= 0) {
-      this.holding_overview = [];
-      return;
-    }
-    const total_cost = this.total_buy_cost + this.drip_buy_cost - this.total_dividend_earned;
-    this.holding_overview = [
-      this.stock_code.toString(),
-      this.stock_name,
-      this.total_buy_count.toString(),
-      (this.total_buy_cost / this.total_buy_count).toFixed(3),
-      this.current_price.toFixed(3),
-      (this.total_buy_count * this.current_price).toFixed(0),
-      this.drip_buy_count.toString(),
-      this.total_dividend_earned.toFixed(2),
-      total_count.toFixed(0),
-      (total_cost / total_count).toFixed(3),
-      (total_count * this.current_price).toFixed(0),
-      (total_count * this.current_price - total_cost).toFixed(0),
-      ((total_count * this.current_price - total_cost) / total_cost * 100).toFixed(2) + "%"
-    ];
-  }
-};
-var DripTrading = class {
-  constructor(plugin_env) {
-    this.stock_dict = /* @__PURE__ */ new Map();
-    this.plugin_env = plugin_env;
-  }
-  ParseRawData(data) {
-    var _a, _b, _c;
-    const new_md5 = import_md52.Md5.hashStr(data).toString();
-    if (this.data_md5 === new_md5) {
-      return false;
-    }
-    this.data_md5 = new_md5;
-    this.stock_dict.clear();
-    const lines = data.split("\n");
-    for (const line of lines) {
-      const strs = line.split(",");
-      if (strs[0] === "STOCK") {
-        const stock_code = parseInt(strs[1]);
-        if (!this.stock_dict.has(stock_code)) {
-          let current_price = this.plugin_env.GetStockRemotePrice(strs[3] + String(stock_code));
-          if (current_price < 0) {
-            current_price = 1;
-          }
-          const stock = new DividendStock(stock_code, strs[2], strs[3], current_price);
-          stock.ParseRawData(strs);
-          this.stock_dict.set(stock_code, stock);
-        } else {
-          (_a = this.stock_dict.get(stock_code)) == null ? void 0 : _a.ResetStats();
-          (_b = this.stock_dict.get(stock_code)) == null ? void 0 : _b.ParseRawData(strs);
-        }
-      }
-      if (strs[0] === "BBUY" || strs[0] === "SBUY" || strs[0] === "SELL" || strs[0] === "SHARE") {
-        const stock_code = parseInt(strs[1]);
-        (_c = this.stock_dict.get(stock_code)) == null ? void 0 : _c.ParseRawData(strs);
-      }
-    }
-    return true;
-  }
-  InitDripTrading() {
-    this.stock_overview = [["\u57FA\u91D1\u4EE3\u7801", "\u57FA\u91D1\u7B80\u79F0", "\u5206\u7EA2\u5468\u671F", "\u53D1\u884C\u65E5\u671F", "\u8D44\u91D1\u89C4\u6A21", "\u8DDF\u8E2A\u6307\u6570", "\u6700\u8FD1\u5206\u7EA2\u65E5\u671F", "\u6700\u8FD1\u5206\u7EA2\u91D1\u989D", "\u5386\u53F2\u7D2F\u8BA1\u5206\u7EA2\u6B21\u6570", "\u5386\u53F2\u7D2F\u8BA1\u5206\u7EA2\u91D1\u989D"]];
-    this.holding_overview = [["\u57FA\u91D1\u4EE3\u7801", "\u57FA\u91D1\u7B80\u79F0", "\u6301\u4ED3\u6570\u91CF", "\u6301\u4ED3\u6210\u672C", "\u5F53\u524D\u4EF7\u683C", "\u6301\u4ED3\u5E02\u503C", "\u5206\u7EA2\u6301\u4ED3", "\u7D2F\u8BA1\u5206\u7EA2", "\u603B\u6301\u4ED3", "\u5E73\u5747\u6210\u672C", "\u603B\u5E02\u503C", "\u6D6E\u76C8\u91D1\u989D", "\u6D6E\u76C8\u6BD4\u4F8B"]];
-    this.trading_record = [["\u57FA\u91D1\u4EE3\u7801", "\u57FA\u91D1\u7B80\u79F0", "\u4EA4\u6613\u65B9\u5411", "\u4EA4\u6613\u65E5\u671F", "\u4EA4\u6613\u4EF7\u683C", "\u4EA4\u6613\u6570\u91CF", "\u4EA4\u6613\u91D1\u989D"]];
-    for (const stock of this.stock_dict.values()) {
-      let current_price = this.plugin_env.GetStockRemotePrice(stock.market_code + String(stock.stock_code));
-      if (current_price < 0) {
-        current_price = stock.current_price;
-      }
-      stock.InitStockOverview(current_price);
-      this.stock_overview.push(stock.stock_overview);
-      if (stock.total_buy_count + stock.drip_buy_count > 0) {
-        this.holding_overview.push(stock.holding_overview);
-      }
-      if (stock.trading_record.length > 0) {
-        this.trading_record = this.trading_record.concat(stock.trading_record);
-      }
-    }
-  }
-  GetStockCodeList() {
-    const stock_code_list = [];
-    for (const stock of this.stock_dict.values()) {
-      stock_code_list.push(stock.market_code + stock.stock_code.toString());
-    }
-    return stock_code_list;
-  }
-};
-
 // src/plugin_env.ts
 var FETCH_CURRENT_PRICE = "fetch_current_price";
 var PluginEnv = class {
@@ -2309,7 +2150,6 @@ var PluginEnv = class {
     this.base_settings = new PluginBaseSettings();
     this.grid_settings = new GridTradingSettings();
     this.grid_trading_dict = /* @__PURE__ */ new Map();
-    this.drip_trading_dict = /* @__PURE__ */ new Map();
     this.stock_remote_price_dict = /* @__PURE__ */ new Map();
     this.event_callback_dict = /* @__PURE__ */ new Map();
     this._event_guid = 0;
@@ -2344,15 +2184,6 @@ var PluginEnv = class {
     grid_trading = new trading_mode(this);
     this.grid_trading_dict.set(grid_name, grid_trading);
     return grid_trading;
-  }
-  GetAndGenDripTrading(drip_name) {
-    let drip_trading = this.drip_trading_dict.get(drip_name);
-    if (drip_trading instanceof DripTrading) {
-      return drip_trading;
-    }
-    drip_trading = new DripTrading(this);
-    this.drip_trading_dict.set(drip_name, drip_trading);
-    return drip_trading;
   }
   UnserializedSettings(data) {
     const lines = data.split("\n");
@@ -2401,59 +2232,6 @@ var PluginEnv = class {
   }
 };
 
-// src/command_util.ts
-var GridCommand = class {
-  constructor() {
-    this.command = "none";
-    this.command_type = "grid";
-  }
-};
-function ExcuteGridCommand(cmd_str) {
-  const strs = cmd_str.split(" ");
-  const command = new GridCommand();
-  command.command = strs[0];
-  command.raw_command_text = cmd_str;
-  if (command.command == "add_record") {
-    command.command_param1 = strs[1];
-    AddGridRecord(command);
-  }
-  if (command.command == "del_record") {
-    command.command_param1 = strs[1];
-    DelGridRecord(command);
-  }
-  return command;
-}
-function AddGridRecord(command) {
-  const sub_strs = command.command_param1.split(",");
-  if (sub_strs.length != 5) {
-    command.error_code = -1;
-    command.error_msg = "invalid param";
-    return false;
-  }
-  if (sub_strs[0] != "BUY" && sub_strs[0] != "SELL" && sub_strs[0] != "SHARE") {
-    command.error_code = -1;
-    command.error_msg = "invalid param";
-    return false;
-  }
-  if (!sub_strs[2].startsWith("\u5C0F\u7F51") && !sub_strs[2].startsWith("\u4E2D\u7F51") && !sub_strs[2].startsWith("\u5927\u7F51") && !sub_strs[2].startsWith("\u7EA2\u5229") && !sub_strs[2].startsWith("\u5229\u6DA6")) {
-    command.error_code = -1;
-    command.error_msg = "invalid param";
-    return false;
-  }
-  command.error_code = 0;
-  command.data_result_str = "\n" + command.command_param1;
-  return true;
-}
-function DelGridRecord(command) {
-  if (IsNumeric(command.command_param1)) {
-    command.error_code = 0;
-    command.data_result_num = Number(command.command_param1);
-  } else {
-    command.error_code = -1;
-    command.error_msg = "invalid param";
-  }
-}
-
 // src/grid_view.ts
 var VIEW_TYPE_GTV = "gtv-view";
 var GTVView = class extends import_obsidian2.TextFileView {
@@ -2478,16 +2256,6 @@ var GTVView = class extends import_obsidian2.TextFileView {
   }
   async onOpen() {
     let div = this.contentEl.createEl("div");
-    this.command_btn_el = div.createEl("button");
-    this.command_btn_el.setText("Excute");
-    this.command_btn_el.onClickEvent((ev) => {
-      this.OnClickAddRecordBtn(ev, this.command_input_el);
-    });
-    this.command_input_el = div.createEl("input");
-    this.command_input_el.empty();
-    this.command_input_el.size = 70;
-    this.command_input_el.placeholder = "Input your command";
-    div = this.contentEl.createEl("div");
     this.stock_tile_el = div.createEl("h1");
     this.stock_table_el = div.createEl("table");
     div = this.contentEl.createEl("div");
@@ -2521,38 +2289,6 @@ var GTVView = class extends import_obsidian2.TextFileView {
     this.debug_log_title_el = div.createEl("h1");
     this.debug_log_table_el = div.createEl("table");
     this.refresh_event_guid = this.plugin_env.SubscribeEvent(FETCH_CURRENT_PRICE, () => this.Refresh());
-  }
-  OnClickAddRecordBtn(ev, input_el) {
-    try {
-      const text = input_el.value;
-      const grid_cmd = ExcuteGridCommand(text);
-      if (grid_cmd.error_code == 0) {
-        if (grid_cmd.command == "add_record") {
-          this.data = this.data + grid_cmd.data_result_str;
-          this.setViewData(this.data, false);
-        }
-        if (grid_cmd.command == "del_record") {
-          const lines = this.data.split("\n");
-          let count = 0;
-          let index = 0;
-          for (index = 0; index < lines.length; index++) {
-            if (lines[index].startsWith("BUY,") || lines[index].startsWith("SELL,")) {
-              count++;
-            }
-            if (count == grid_cmd.data_result_num) {
-              break;
-            }
-          }
-          if (index < lines.length) {
-            lines.splice(index, 1);
-          }
-          this.data = lines.join("\n");
-          this.setViewData(this.data, false);
-        }
-      }
-    } catch (e) {
-      DebugLog("Command has error ", e);
-    }
   }
   async onClose() {
     this.contentEl.empty();
@@ -3027,85 +2763,8 @@ var CorView = class extends import_obsidian4.TextFileView {
   }
 };
 
-// src/drip_view.ts
-var import_obsidian5 = require("obsidian");
-var VIEW_TYPE_DTV = "dtv-view";
-var DTVView = class extends import_obsidian5.TextFileView {
-  constructor(leaf, plugin_env) {
-    super(leaf);
-    this.plugin_env = plugin_env;
-    this.data = "";
-    this.refresh_event_guid = -1;
-  }
-  getViewType() {
-    return VIEW_TYPE_DTV;
-  }
-  getViewData() {
-    return this.data;
-  }
-  setViewData(data, clear) {
-    this.data = data;
-    this.Refresh();
-  }
-  clear() {
-    this.data = "";
-  }
-  async onOpen() {
-    let div = this.contentEl.createEl("div");
-    this.stock_title_el = div.createEl("h2", { text: "\u6807\u7684\u6982\u89C8" });
-    this.stock_table_el = div.createEl("table");
-    div = this.contentEl.createEl("div");
-    this.holding_title_el = div.createEl("h2", { text: "\u6301\u4ED3\u6982\u89C8" });
-    this.holding_table_el = div.createEl("table");
-    div = this.contentEl.createEl("div");
-    this.record_title_el = div.createEl("h2", { text: "\u4EA4\u6613\u8BB0\u5F55" });
-    this.record_table_el = div.createEl("table");
-    this.refresh_event_guid = this.plugin_env.SubscribeEvent(FETCH_CURRENT_PRICE, () => this.Refresh());
-  }
-  async onClose() {
-    this.contentEl.empty();
-    if (this.refresh_event_guid > 0) {
-      this.plugin_env.UnsubscribeEvent(FETCH_CURRENT_PRICE, this.refresh_event_guid);
-      this.refresh_event_guid = -1;
-    }
-  }
-  Refresh() {
-    this.stock_title_el.setText("\u6807\u7684\u6982\u89C8");
-    this.stock_table_el.empty();
-    this.holding_title_el.setText("\u6301\u4ED3\u6982\u89C8");
-    this.holding_table_el.empty();
-    this.record_title_el.setText("\u4EA4\u6613\u8BB0\u5F55");
-    this.record_table_el.empty();
-    if (this.file != null) {
-      const drip_trading = this.plugin_env.GetAndGenDripTrading(this.file.name);
-      drip_trading.ParseRawData(this.data);
-      drip_trading.InitDripTrading();
-      this.DisplayTable(this.stock_table_el, drip_trading.stock_overview, false);
-      this.DisplayTable(this.holding_table_el, drip_trading.holding_overview, false);
-      this.DisplayTable(this.record_table_el, drip_trading.trading_record, false);
-    }
-  }
-  DisplayTable(table_el, table, is_color) {
-    try {
-      table_el.empty();
-      const tbody = table_el.createEl("tbody");
-      for (const row of table) {
-        const tr = tbody.createEl("tr");
-        for (const cell of row) {
-          const td = tr.createEl("td", { text: cell });
-          if (is_color) {
-            td.addClass("colored");
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error displaying table:", error);
-    }
-  }
-};
-
 // src/main.ts
-var TradingStrategy = class extends import_obsidian6.Plugin {
+var TradingStrategy = class extends import_obsidian5.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
     this.plugin_env = new PluginEnv();
@@ -3118,7 +2777,7 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
     });
     ribbonIconEl.addClass("my-plugin-ribbon-class");
     this.addSettingTab(new TradingStrategySettingTab(this.app, this, this.plugin_env));
-    this.interval_callback_id = window.setInterval(() => this.FetchAllStockCurrentPrice(), 1 * 1e3);
+    this.interval_callback_id = window.setInterval(() => this.FetchAllStockCurrentPrice(), 60 * 1e3);
     this.registerInterval(this.interval_callback_id);
     this.registerView(VIEW_TYPE_GTV, (leaf) => {
       const gtv_view = new GTVView(leaf, this.plugin_env);
@@ -3132,13 +2791,8 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
       const cor_view = new CorView(leaf);
       return cor_view;
     });
-    this.registerView(VIEW_TYPE_DTV, (leaf) => {
-      const dtv_view = new DTVView(leaf, this.plugin_env);
-      return dtv_view;
-    });
     this.registerExtensions(["gtv"], VIEW_TYPE_GTV);
     this.registerExtensions(["gto"], VIEW_TYPE_GTO);
-    this.registerExtensions(["dtv"], VIEW_TYPE_DTV);
     this.registerExtensions(["cor"], VIEW_TYPE_COR);
   }
   onunload() {
@@ -3150,25 +2804,17 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
     }
   }
   SaveSettingsToDisk() {
-    DebugLog("MAX_SLUMP_PCT1 ", this.plugin_env.grid_settings.MAX_SLUMP_PCT);
     const setting_data = this.plugin_env.SerializedSettings();
-    DebugLog("MAX_SLUMP_PCT2 ", this.plugin_env.grid_settings.MAX_SLUMP_PCT);
-    DebugLog(setting_data);
     this.saveData(setting_data);
   }
   async FetchAllStockCurrentPrice() {
-    const api_licence = this.plugin_env.GetAPILisence();
     const grid_folder = this.app.vault.getAbstractFileByPath("\u7F51\u683C\u7B56\u7565");
     let price_cache = /* @__PURE__ */ new Map();
     let hist_cache = /* @__PURE__ */ new Map();
-    if (grid_folder instanceof import_obsidian6.TFolder) {
-      if (this.interval_callback_id > 0) {
-        window.clearInterval(this.interval_callback_id);
-        this.interval_callback_id = -1;
-      }
+    if (grid_folder instanceof import_obsidian5.TFolder) {
       for (let index = 0; index < grid_folder.children.length; index++) {
         const grid_file = grid_folder.children[index];
-        if (grid_file instanceof import_obsidian6.TFile && grid_file.name.endsWith(".gto")) {
+        if (grid_file instanceof import_obsidian5.TFile && grid_file.name.endsWith(".gto")) {
           const content = await this.app.vault.cachedRead(grid_file);
           const lines = content.split("\n");
           for (let idx = 0; idx < lines.length; idx++) {
@@ -3187,7 +2833,7 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
       }
       for (let index = 0; index < grid_folder.children.length; index++) {
         const grid_file = grid_folder.children[index];
-        if (grid_file instanceof import_obsidian6.TFile && grid_file.name.endsWith(".gtv")) {
+        if (grid_file instanceof import_obsidian5.TFile && grid_file.name.endsWith(".gtv")) {
           const content = await this.app.vault.cachedRead(grid_file);
           const mode_str = content.split("\n")[0].split(",")[0];
           let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
@@ -3208,7 +2854,7 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
       }
       for (let index = 0; index < grid_folder.children.length; index++) {
         const grid_file = grid_folder.children[index];
-        if (grid_file instanceof import_obsidian6.TFile && grid_file.name.endsWith(".gtv")) {
+        if (grid_file instanceof import_obsidian5.TFile && grid_file.name.endsWith(".gtv")) {
           const content = await this.app.vault.cachedRead(grid_file);
           const mode_str = content.split("\n")[0].split(",")[0];
           let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
@@ -3217,35 +2863,20 @@ var TradingStrategy = class extends import_obsidian6.Plugin {
             continue;
           }
           let current_price = -1;
-          current_price = await GetCurrentPriceFromSina(grid_trading.market_code + String(grid_trading.target_stock));
+          current_price = await GetCurrentPriceFromTencent(grid_trading.market_code + String(grid_trading.target_stock));
           current_price = Number(current_price);
-          await sleep(10);
           if (current_price < 0) {
             continue;
           }
           this.plugin_env.stock_remote_price_dict.set(String(grid_trading.target_stock), current_price);
           grid_trading.UpdateRemotePrice(current_price);
         }
-        if (grid_file instanceof import_obsidian6.TFile && grid_file.name.endsWith(".dtv")) {
-          const content = await this.app.vault.cachedRead(grid_file);
-          let drip_trading = this.plugin_env.GetAndGenDripTrading(grid_file.name);
-          const result = drip_trading.ParseRawData(content);
-          const stock_code_list = drip_trading.GetStockCodeList();
-          for (const stock_code of stock_code_list) {
-            const current_price = await GetCurrentPriceFromSina(stock_code);
-            await sleep(10);
-            if (current_price < 0) {
-              continue;
-            }
-            this.plugin_env.stock_remote_price_dict.set(stock_code, current_price);
-          }
-        }
       }
       this.plugin_env.PublishEvent(FETCH_CURRENT_PRICE);
     }
   }
 };
-var TradingStrategySettingTab = class extends import_obsidian6.PluginSettingTab {
+var TradingStrategySettingTab = class extends import_obsidian5.PluginSettingTab {
   constructor(app, plugin, plugin_env) {
     super(app, plugin);
     this.plugin = plugin;
@@ -3267,7 +2898,7 @@ var TradingStrategySettingTab = class extends import_obsidian6.PluginSettingTab 
     for (bkey in this.plugin_env.base_settings) {
       const key_name = SETTING_NAME.get(bkey);
       if (key_name != void 0) {
-        const setting = new import_obsidian6.Setting(base_div).setName(key_name);
+        const setting = new import_obsidian5.Setting(base_div).setName(key_name);
         setting.addText((text_comp, setting_key = bkey) => {
           text_comp.setValue(String(GetSettingValue(this.plugin_env.base_settings, setting_key)));
           text_comp.onChange((value) => {
@@ -3283,13 +2914,11 @@ var TradingStrategySettingTab = class extends import_obsidian6.PluginSettingTab 
     for (key in this.plugin_env.grid_settings) {
       const key_name = SETTING_NAME.get(key);
       if (key_name != void 0) {
-        const setting = new import_obsidian6.Setting(grid_div).setName(key_name);
+        const setting = new import_obsidian5.Setting(grid_div).setName(key_name);
         setting.addText((text_comp, setting_key = key) => {
-          DebugLog("add Setting Key: ", setting_key);
           text_comp.setValue(String(GetSettingValue(this.plugin_env.grid_settings, setting_key)));
           text_comp.onChange((value) => {
             SetSettingValue(this.plugin_env.grid_settings, setting_key, Number(value));
-            DebugLog("SetValue succeed ", setting_key, GetSettingValue(this.plugin_env.grid_settings, setting_key));
             this.plugin_env.is_settings_changed = true;
           });
         });
