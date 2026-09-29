@@ -716,11 +716,49 @@ var GridTrading = class {
   constructor(plugin_env) {
     this.plugin_env = plugin_env;
     this.grid_settings = plugin_env.grid_settings.Clone();
-    this.debug_log = [];
-    this.data_md5 = "";
     this.is_empty = true;
+    this.data_md5 = "";
     this.is_debug = false;
+    this.is_pause = false;
+    this.is_clear = false;
+    this.is_cancel = false;
     this.remote_current_price = -1;
+    this.debug_log = [];
+    this.stock_table = [];
+    this.param_table = [];
+    this.trading_table = [];
+    this.trading_interest = [];
+    this.trading_analysis = [];
+    this.trading_record = [];
+    this.trading_income = [];
+    this.holding_analysis = [];
+    this.holding_record = [];
+    this.stock_analysis = [];
+    this.adjust_record = [];
+    this.raw_trading_record = [];
+    this.raw_adjust_record = [];
+    this.raw_interest_record = [];
+    this.clear_sell_record = /* @__PURE__ */ new Map();
+    this.buy_grid_record = [];
+    this.sgrid_step_table = [];
+    this.mgrid_step_table = [];
+    this.lgrid_step_table = [];
+    this.force_view_grid_list = [];
+    this.hist_analysis = [];
+    this.buy_triggered_rows = [];
+    this.sell_triggered_rows = [];
+    this.buy_monitor_rows = [];
+    this.sell_monitor_rows = [];
+    this.disable_rows = [];
+    this.stock_buy_overview = [];
+    this.stock_sell_overview = [];
+    this.stock_passive_filled_record = [];
+    this.stock_active_filled_record = [];
+    this.stock_overview = [];
+    this.total_retain = 0;
+    this.retain_cost = 0;
+    this.total_hold = 0;
+    this.total_cost = 0;
   }
   InitGridTrading(data) {
   }
@@ -2336,7 +2374,7 @@ var GTVView = class extends import_obsidian2.TextFileView {
     }
   }
   DisplayTable(grid_trading, table_el, table, is_color) {
-    if (table.length == 0) {
+    if (!table || table.length == 0) {
       return;
     }
     try {
@@ -2369,6 +2407,9 @@ var GTVView = class extends import_obsidian2.TextFileView {
     }
   }
   DisplayTable2(table_el, table, is_color) {
+    if (!table || table.length == 0) {
+      return;
+    }
     const table_body = table_el.createEl("tbody");
     table.forEach((row, i) => {
       const table_row = table_body.createEl("tr");

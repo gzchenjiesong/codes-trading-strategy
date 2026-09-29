@@ -189,7 +189,7 @@ export class GTVView extends TextFileView
 
     DisplayTable(grid_trading: GridTrading, table_el: HTMLElement, table: string[][], is_color: boolean)
     {
-        if (table.length == 0)
+        if (!table || table.length == 0)
         {
             return;
         }
@@ -238,6 +238,10 @@ export class GTVView extends TextFileView
 
     DisplayTable2(table_el: HTMLElement, table: string[][], is_color: boolean)
     {
+        if (!table || table.length == 0)
+        {
+            return;
+        }
         const table_body = table_el.createEl("tbody");
         table.forEach((row, i) => {
             const table_row = table_body.createEl("tr");

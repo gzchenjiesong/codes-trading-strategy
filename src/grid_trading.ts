@@ -77,11 +77,50 @@ export class GridTrading
     {
         this.plugin_env = plugin_env;
         this.grid_settings = plugin_env.grid_settings.Clone();
-        this.debug_log = []
-        this.data_md5 = "";
         this.is_empty = true;
+        this.data_md5 = "";
         this.is_debug = false;
+        this.is_pause = false;
+        this.is_clear = false;
+        this.is_cancel = false;
         this.remote_current_price = -1;
+        // 所有数组字段统一初始化为空数组，避免视图打开时访问 undefined 报错
+        this.debug_log = [];
+        this.stock_table = [];
+        this.param_table = [];
+        this.trading_table = [];
+        this.trading_interest = [];
+        this.trading_analysis = [];
+        this.trading_record = [];
+        this.trading_income = [];
+        this.holding_analysis = [];
+        this.holding_record = [];
+        this.stock_analysis = [];
+        this.adjust_record = [];
+        this.raw_trading_record = [];
+        this.raw_adjust_record = [];
+        this.raw_interest_record = [];
+        this.clear_sell_record = new Map<string, number>;
+        this.buy_grid_record = [];
+        this.sgrid_step_table = [];
+        this.mgrid_step_table = [];
+        this.lgrid_step_table = [];
+        this.force_view_grid_list = [];
+        this.hist_analysis = [];
+        this.buy_triggered_rows = [];
+        this.sell_triggered_rows = [];
+        this.buy_monitor_rows = [];
+        this.sell_monitor_rows = [];
+        this.disable_rows = [];
+        this.stock_buy_overview = [];
+        this.stock_sell_overview = [];
+        this.stock_passive_filled_record = [];
+        this.stock_active_filled_record = [];
+        this.stock_overview = [];
+        this.total_retain = 0;
+        this.retain_cost = 0;
+        this.total_hold = 0;
+        this.total_cost = 0;
     }
 
     InitGridTrading(data: string)
