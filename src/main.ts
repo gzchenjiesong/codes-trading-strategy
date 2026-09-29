@@ -28,7 +28,7 @@ export default class TradingStrategy extends Plugin
     async onload() {
         await this.LoadSettingsFromDisk();
         // This creates an icon in the left ribbon.
-        const ribbonIconEl = this.addRibbonIcon('dice', 'GridTrading', (evt: MouseEvent) => {
+        const ribbonIconEl = this.addRibbonIcon('dice', '网格策略', (evt: MouseEvent) => {
             // Called when the user clicks the icon.
             this.FetchAllStockCurrentPrice();
         });
@@ -91,7 +91,7 @@ export default class TradingStrategy extends Plugin
     {
         //DebugLog('run FetchAllStockCurrentPrice ', this.app.vault.getName());
         const api_licence = this.plugin_env.GetAPILisence()
-        const grid_folder = this.app.vault.getAbstractFileByPath('GridTrading');
+        const grid_folder = this.app.vault.getAbstractFileByPath('网格策略');
         let price_cache = new Map<string, number>;
         let hist_cache = new Map<string, string>;
         //DebugLog("getAbstractFileByPath ", String(grid_folder));
