@@ -81,7 +81,6 @@ export default class TradingStrategy extends Plugin
     {
         const grid_folder = this.app.vault.getAbstractFileByPath('网格策略');
         let price_cache = new Map<string, number>;
-        let hist_cache = new Map<string, string>;
         if (grid_folder instanceof TFolder)
         {
             // 首次成功解析后停止轮询重建（保留 interval，仅避免重复 clear）
@@ -104,10 +103,6 @@ export default class TradingStrategy extends Plugin
                         {
                             this.plugin_env.cash_balance = Number(strs[1]);
                         }
-                        if (strs[0] == 'HIST')
-                        {
-                            hist_cache.set(strs[1], lines[idx]);
-                        }
                     }
                 }
             }
@@ -122,10 +117,6 @@ export default class TradingStrategy extends Plugin
                     let grid_trading = this.plugin_env.GetAndGenGridTrading(grid_file.name, mode_str);
                     grid_trading.InitGridTrading(content);
                     const full_name = grid_trading.market_code + String(grid_trading.target_stock);
-                    if (hist_cache.has(full_name))
-                    {
-                        grid_trading.ParseHistData(hist_cache.get(full_name)!);
-                    }
                     if (grid_trading.is_debug)
                     {
                         continue;

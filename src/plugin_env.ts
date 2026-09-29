@@ -5,8 +5,6 @@
 import { PluginBaseSettings, GridTradingSettings, PackSettings, UnpackSettings } from "./settings";
 import { GridTrading } from "./grid_trading";
 import { DebugLog } from "./remote_util";
-import { GridTradingModeOne } from "./grid_trading_m1";
-import { GridTradingModeTwo } from "./grid_trading_m2";
 import { GridTradingModeThree } from "./grid_trading_m3";
 
 export const UPDATE_STOCK_SETTING = "update_stock_setting";
@@ -58,19 +56,8 @@ export class PluginEnv
 
     GetGridTradingTypeByString(mode: string)
     {
-        if (mode == "mode_two")
-        {
-            //DebugLog("GetGridTradingTypeByString return Two ", mode)
-            return GridTradingModeTwo;
-        }
-        if (mode == "mode_three")
-        {
-            //DebugLog("GetGridTradingTypeByString return Three ", mode)
-            return GridTradingModeThree;
-        }
-        // 默认使用模式1
-        //DebugLog("GetGridTradingTypeByString return One ", mode)
-        return GridTradingModeOne;
+        // 仅保留模式3（手动步进），mode_one/mode_two 已废弃
+        return GridTradingModeThree;
     }
 
     GetAndGenGridTrading(grid_name: string, mode: string)

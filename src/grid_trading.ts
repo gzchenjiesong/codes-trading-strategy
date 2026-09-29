@@ -55,7 +55,6 @@ export class GridTrading
     mgrid_step_table: string [][];
     lgrid_step_table: string [][];
     force_view_grid_list: string [];
-    hist_analysis: string [][];
 
     total_retain: number;
     retain_cost: number;
@@ -106,7 +105,6 @@ export class GridTrading
         this.mgrid_step_table = [];
         this.lgrid_step_table = [];
         this.force_view_grid_list = [];
-        this.hist_analysis = [];
         this.buy_triggered_rows = [];
         this.sell_triggered_rows = [];
         this.buy_monitor_rows = [];
@@ -289,29 +287,6 @@ export class GridTrading
             }
         }
         return true;
-    }
-
-    ParseHistData(hist_str: string)
-    {
-        const strs = hist_str.split(",");
-        this.grid_settings.BOTTOM_BUY_PCT = Number(strs[4]) / this.target_price;
-        this.grid_settings.MINIMUM_BUY_PCT = Number(strs[6]) / this.target_price;
-        this.InitStockTable();
-        this.hist_analysis = [["开始日期", "结束日期", "最低价", "最高价", "现价", "现价回撤", "现价涨幅", "首网价", "网格回撤",  "网格涨幅"],];
-        // 计算一年期间的回撤与涨幅
-        let min_price = Number(strs[4]);
-        let max_price = Number(strs[5]);
-        const start_date = RecentDate(strs[2], nYearsAgo(strs[3], 1));
-        this.hist_analysis.push([start_date, strs[3], strs[4], strs[5], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
-        // 计算五年期间的回撤与涨幅
-        min_price = Number(strs[6]);
-        max_price = Number(strs[7]);
-        const start_date5 = RecentDate(strs[2], nYearsAgo(strs[3], 5));
-        this.hist_analysis.push([start_date5, strs[3], strs[6], strs[7], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
-        // 计算全生命周期的回撤与涨幅
-        min_price = Number(strs[8]);
-        max_price = Number(strs[9]);
-        this.hist_analysis.push([strs[2], strs[3], strs[8], strs[9], String(this.current_price), ToTradingGap(this.current_price, min_price), ToTradingGap(this.current_price, max_price), String(this.target_price), ToTradingGap(this.target_price, min_price),  ToTradingGap(this.target_price, max_price)]);
     }
 
     InitTradingOverview()

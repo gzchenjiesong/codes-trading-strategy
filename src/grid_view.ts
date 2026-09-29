@@ -31,8 +31,6 @@ export class GTVView extends TextFileView
     holding_table_el: HTMLElement;
     income_title_el: HTMLElement;
     income_table_el: HTMLElement;
-    hist_title_el: HTMLElement;
-    hist_table_el: HTMLElement;
     analysis_title_el: HTMLElement;
     analysis_table_el: HTMLElement;
     record_title_el: HTMLElement;
@@ -98,10 +96,6 @@ export class GTVView extends TextFileView
         this.income_table_el = div.createEl("table");
 
         div = this.contentEl.createEl("div");
-        this.hist_title_el = div.createEl("h1");
-        this.hist_table_el = div.createEl("table");
-
-        div = this.contentEl.createEl("div");
         this.analysis_title_el = div.createEl("h1");
         this.analysis_table_el = div.createEl("table")
 
@@ -145,8 +139,6 @@ export class GTVView extends TextFileView
         this.holding_table_el.empty();
         this.income_title_el.setText("收益分析");
         this.income_table_el.empty();
-        this.hist_title_el.setText("价格分析");
-        this.hist_table_el.empty();
         this.analysis_title_el.setText("回撤分析");
         this.analysis_table_el.empty();
         this.record_title_el.setText("交易记录");
@@ -174,8 +166,6 @@ export class GTVView extends TextFileView
             this.DisplayTable(grid_trading, this.holding_table_el, grid_trading.holding_analysis, false);
             // 收益分析
             this.DisplayTable(grid_trading, this.income_table_el, grid_trading.trading_income, false);
-            // 价格分析
-            this.DisplayTable(grid_trading, this.hist_table_el, grid_trading.hist_analysis, false);
             // 回撤分析
             this.DisplayTable(grid_trading, this.analysis_table_el, grid_trading.trading_analysis, false);
             // 交易记录
