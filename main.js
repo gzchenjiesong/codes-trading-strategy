@@ -10,7 +10,11 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -42,7 +46,7 @@ var require_md5 = __commonJS({
     exports.Md5 = void 0;
     var Md52 = (
       /** @class */
-      function() {
+      (function() {
         function Md53() {
           this._dataLength = 0;
           this._bufferLength = 0;
@@ -368,7 +372,7 @@ var require_md5 = __commonJS({
         Md53.hexOut = [];
         Md53.onePassHasher = new Md53();
         return Md53;
-      }()
+      })()
     );
     exports.Md5 = Md52;
     if (Md52.hashStr("hello") !== "5d41402abc4b2a76b9719d911017c592") {
@@ -446,7 +450,7 @@ var PluginBaseSettings = class {
     this.DATA_API_LICENCE = "";
   }
 };
-var GridTradingSettings = class {
+var GridTradingSettings = class _GridTradingSettings {
   constructor() {
     this.ONE_GRID_LIMIT = 1e4;
     this.MAX_SLUMP_PCT = 0.67;
@@ -472,7 +476,7 @@ var GridTradingSettings = class {
     this.INTEREST_TRIGGER = 0.85;
   }
   Clone() {
-    const clone = new GridTradingSettings();
+    const clone = new _GridTradingSettings();
     clone.ONE_GRID_LIMIT = this.ONE_GRID_LIMIT;
     clone.MAX_SLUMP_PCT = this.MAX_SLUMP_PCT;
     clone.TRIGGER_ADD_POINT = this.TRIGGER_ADD_POINT;
@@ -690,171 +694,243 @@ function GetTodayStr() {
 
 // src/grid_trading.ts
 var import_md5 = __toESM(require_md5());
-var GridTrading = class {
-  constructor(plugin_env) {
-    this.plugin_env = plugin_env;
-    this.grid_settings = plugin_env.grid_settings.Clone();
-    this.is_empty = true;
-    this.data_md5 = "";
-    this.is_debug = false;
-    this.is_pause = false;
-    this.is_clear = false;
-    this.is_cancel = false;
-    this.remote_current_price = -1;
-    this.debug_log = [];
-    this.stock_table = [];
-    this.param_table = [];
-    this.trading_table = [];
-    this.trading_interest = [];
-    this.trading_analysis = [];
-    this.trading_record = [];
-    this.trading_income = [];
-    this.holding_analysis = [];
-    this.holding_record = [];
-    this.stock_analysis = [];
-    this.adjust_record = [];
-    this.raw_trading_record = [];
-    this.raw_adjust_record = [];
-    this.raw_interest_record = [];
-    this.clear_sell_record = /* @__PURE__ */ new Map();
-    this.buy_grid_record = [];
-    this.sgrid_step_table = [];
-    this.mgrid_step_table = [];
-    this.lgrid_step_table = [];
-    this.force_view_grid_list = [];
-    this.buy_triggered_rows = [];
-    this.sell_triggered_rows = [];
-    this.buy_monitor_rows = [];
-    this.sell_monitor_rows = [];
-    this.disable_rows = [];
-    this.stock_buy_overview = [];
-    this.stock_sell_overview = [];
-    this.stock_passive_filled_record = [];
-    this.stock_active_filled_record = [];
-    this.stock_overview = [];
-    this.total_retain = 0;
-    this.retain_cost = 0;
-    this.total_hold = 0;
-    this.total_cost = 0;
-  }
-  InitGridTrading(data) {
-  }
-  UpdateRemotePrice(remote_price) {
-  }
-  DebugLog(level, log_str, extra_info) {
-    this.debug_log.push([level, log_str, extra_info]);
-  }
-  GetTradingTitle() {
-    return this.stock_name + "(" + String(this.target_stock) + ")";
-  }
-  IsStock() {
-    if (this.is_empty == false && (this.market_code == "sz" || this.market_code == "sh")) {
-      return true;
-    } else {
-      return false;
+
+// src/grid_trading_calc.ts
+var GridTradingCalc = class {
+  CalcHoldingPercent(grid_type, empty_price, clear_avg_price) {
+    const total_hold = this.total_hold;
+    const total_cost = this.total_cost;
+    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+    let grid_total_hold = 0;
+    let grid_total_cost = 0;
+    let grid_empty_income = 0;
+    let grid_clear_income = 0;
+    for (let idx = 0; idx < this.holding_record.length; idx++) {
+      if (this.holding_record[idx][2].startsWith(grid_type)) {
+        const grid_hold = Number(this.holding_record[idx][4]);
+        const grid_cost = Number(this.holding_record[idx][3]) * Number(this.holding_record[idx][4]);
+        grid_total_hold += grid_hold;
+        grid_total_cost += grid_cost;
+        let grid_row = this.FindTradingGridRow(this.holding_record[idx][2]);
+        const empty_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * empty_price - grid_cost;
+        grid_empty_income += empty_income;
+        const clear_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * clear_avg_price - grid_cost;
+        grid_clear_income += clear_income;
+      }
     }
+    grid_total_cost = Math.ceil(grid_total_cost);
+    let grid_current_value = Math.floor(grid_total_hold * this.current_price);
+    this.holding_analysis.push([
+      grid_type,
+      String(grid_total_hold),
+      String(grid_total_cost),
+      String(grid_current_value),
+      AveragePriceStr(grid_total_cost, grid_total_hold, precision),
+      this.current_price.toFixed(precision),
+      String(grid_current_value - grid_total_cost),
+      grid_empty_income.toFixed(0),
+      grid_clear_income.toFixed(0),
+      ProportionPctStr(grid_total_hold, total_hold, 2),
+      ProportionPctStr(grid_total_cost, total_cost, 2)
+    ]);
   }
-  IsMonitor() {
-    if (this.is_empty || this.is_debug || this.is_clear || this.is_cancel) {
-      return false;
-    } else {
-      return true;
-    }
-  }
-  ParseRawData(data) {
-    const new_md5 = import_md5.Md5.hashStr(data);
-    if (new_md5 === this.data_md5) {
-      return false;
-    }
-    this.data_md5 = new_md5;
-    const lines = data.split("\n");
-    const strs = lines[0].split(",");
-    this.target_stock = Number(strs[1]);
-    this.stock_name = strs[2];
-    this.market_code = strs[3];
-    this.target_price = Number(strs[4]);
-    this.current_price = Number(strs[5]);
-    this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[1]);
-    if (this.remote_current_price > 0) {
-      this.current_price = this.remote_current_price;
-    }
-    this.is_debug = false;
-    this.is_pause = false;
-    this.is_clear = false;
-    this.is_cancel = false;
-    this.grid_settings = this.plugin_env.grid_settings.Clone();
-    this.raw_trading_record = [];
-    this.raw_adjust_record = [];
-    this.raw_interest_record = [];
-    this.buy_grid_record = [];
-    this.sgrid_step_table = [];
-    this.mgrid_step_table = [];
-    this.lgrid_step_table = [];
-    this.clear_sell_record = /* @__PURE__ */ new Map();
-    this.force_view_grid_list = [];
-    for (let idx = 1; idx < lines.length; idx++) {
-      const strs2 = lines[idx].split(",");
-      if (strs2[0] == "BUY") {
-        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
-        this.buy_grid_record.push(strs2[2]);
-      }
-      if (strs2[0] == "SELL") {
-        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
-        const i = this.buy_grid_record.indexOf(strs2[2]);
-        if (i >= 0)
-          this.buy_grid_record.splice(i, 1);
-      }
-      if (strs2[0] == "SHARE") {
-        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
-      }
-      if (strs2[0] == "BASE") {
-        this.grid_settings.UnpackBase(strs2);
-      }
-      if (strs2[0] == "STEP") {
-        this.grid_settings.UnpackStep(strs2);
-      }
-      if (strs2[0] == "INTEREST") {
-        this.grid_settings.UnpackInterest(strs2);
-      }
-      if (strs2[0] == "APY") {
-        this.raw_interest_record.push([strs2[1], strs2[2], strs2[3], strs2[4], strs2[5], strs2[6], strs2[7]]);
-      }
-      if (strs2[0] == "SGRID") {
-        this.sgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
-      }
-      if (strs2[0] == "MGRID") {
-        this.mgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
-      }
-      if (strs2[0] == "LGRID") {
-        this.lgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
-      }
-      if (strs2[0] == "ADJ") {
-        this.raw_adjust_record.push([strs2[1], strs2[2], strs2[3], strs2[4], strs2[5]]);
-      }
-      if (strs2[0] == "VIEW") {
-        for (let i = 1; i < strs2.length; i++)
-          if (strs2[i].trim().length > 0)
-            this.force_view_grid_list.push(strs2[i].trim());
-      }
-      if (strs2[0] == "CTRL") {
-        for (let i = 1; i < strs2.length; i++) {
-          if (strs2[i].trim() == "DEBUG") {
-            this.is_debug = true;
-          }
-          if (strs2[i].trim() == "PAUSE") {
-            this.is_pause = true;
-          }
-          if (strs2[i].trim() == "CLEAR") {
-            this.is_clear = true;
-          }
-          if (strs2[i].trim() == "CANCEL") {
-            this.is_cancel = true;
+  CalcTradingIncome(title_txt, slump_pct, empty_price, clear_avg_price, take_profit_price, clear_price, need_slump = true) {
+    let total_cost = this.total_cost;
+    let total_count = this.total_hold;
+    let empty_cost = this.total_cost;
+    let empty_count = this.total_hold;
+    let profit_cost = this.total_cost;
+    let profit_count = this.total_hold;
+    let clear_income_max = 0;
+    let take_profit_count = 0;
+    let clear_hold_max = 0;
+    let total_sell_cost = 0;
+    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+    this.trading_table.forEach((row, i) => {
+      if (this.trading_table[i][0].startsWith("\u5229\u6DA6")) {
+        clear_income_max = clear_income_max + Number(this.trading_table[i][9]);
+        if (this.trading_table[i][0].startsWith("\u5229\u6DA61")) {
+          take_profit_count = take_profit_count + Number(this.trading_table[i][8]);
+        }
+      } else {
+        if (this.buy_grid_record.includes(this.trading_table[i][0])) {
+          empty_cost = empty_cost - Number(row[9]);
+          empty_count = empty_count - Number(row[8]);
+          clear_hold_max = clear_hold_max + (Number(row[4]) - Number(row[8]));
+          total_sell_cost = total_sell_cost + Number(row[9]);
+        } else {
+          if (i > 0 && ToNumber(row[1]) >= slump_pct && need_slump) {
+            total_cost = total_cost + Number(row[5]);
+            total_count = total_count + Number(row[4]);
+            empty_cost = empty_cost + Number(row[5]) - Number(row[9]);
+            empty_count = empty_count + Number(row[4]) - Number(row[8]);
+            clear_hold_max = clear_hold_max + (Number(row[4]) - Number(row[8]));
+            total_sell_cost = total_sell_cost + Number(row[9]);
           }
         }
       }
-    }
-    return true;
+    });
+    clear_income_max = Math.floor(clear_income_max + clear_hold_max * clear_avg_price - empty_cost);
+    take_profit_count = take_profit_count + MyFloor(clear_hold_max * 0.4, this.grid_settings.MIN_BATCH_COUNT);
+    profit_cost = empty_cost - Math.floor(take_profit_count * take_profit_price);
+    profit_count = empty_count - take_profit_count;
+    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6301\u4ED3", total_count, total_cost, this.target_price * slump_pct, total_cost, this.total_cost, 0));
+    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6E05\u683C", empty_count, empty_cost, empty_price, total_cost, 0, total_sell_cost));
+    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6B62\u76C8", profit_count, profit_cost, take_profit_price, total_cost, 0, total_sell_cost + Math.floor(take_profit_count * take_profit_price)));
+    this.trading_income.push([
+      title_txt + "\u6E05\u4ED3",
+      "0",
+      "0",
+      "0",
+      "-",
+      clear_price.toFixed(precision),
+      String(clear_income_max),
+      String(total_cost),
+      String(total_sell_cost + empty_cost + clear_income_max),
+      ToTradingGap(total_cost, total_sell_cost + empty_cost + clear_income_max, 2),
+      "-"
+    ]);
   }
+  GenerateClearRow(grid_name, idx, grid_step_pct, sell_count) {
+    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+    const price_step = Math.floor((100 + Math.floor(grid_step_pct * 100)) ** idx / 100 ** (idx - 1)) / 100;
+    const sell_price = FixedPrice(this.target_price, price_step, precision);
+    let clear_count = this.clear_sell_record.get(grid_name + String(idx));
+    if (clear_count == void 0) {
+      clear_count = 0;
+    }
+    return [
+      grid_name + String(idx),
+      ToPercent(price_step),
+      "",
+      "",
+      "",
+      "",
+      (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision),
+      sell_price.toFixed(precision),
+      String(sell_count - clear_count),
+      String(Math.ceil(sell_price * (sell_count - clear_count))),
+      "-",
+      "+" + ToPercent(grid_step_pct),
+      "-",
+      "-"
+    ];
+  }
+  GenerateIncomeRow(grid_name, total_count, total_cost, current_price, max_cost, current_cost, sell_value) {
+    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+    const current_value = MyFloor(total_count * current_price, 1);
+    const total_income = current_value - total_cost;
+    let position = ToPercent(current_cost / max_cost);
+    if (current_cost == 0) {
+      position = "-";
+    }
+    return [
+      grid_name,
+      String(total_count),
+      String(total_cost),
+      String(current_value),
+      (total_cost / Math.max(total_count, 1)).toFixed(precision),
+      current_price.toFixed(precision),
+      String(total_income),
+      String(max_cost),
+      String(sell_value + current_value),
+      ToTradingGap(max_cost, total_income + max_cost, 2),
+      position
+    ];
+  }
+  CalcClearPrice(step_pct, step_idx) {
+    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
+    const price_step = Math.floor((100 + Math.floor(step_pct * 100)) ** step_idx / 100 ** (step_idx - 1)) / 100;
+    return FixedPrice(this.target_price, price_step, precision);
+  }
+  CalcGridIncomes(retain_count) {
+    const clear_pct = this.grid_settings.CLEAR_STEP_PCT;
+    const clear_avg_price = Number((this.CalcClearPrice(clear_pct, 1) * 0.4 + this.CalcClearPrice(clear_pct, 2) * 0.6).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
+    const first_clear_price = this.CalcClearPrice(clear_pct, 1);
+    return [retain_count * first_clear_price, retain_count * clear_avg_price];
+  }
+  IsNeedMonitor(table_index, is_sell, current_price, max_rise_pct) {
+    if (is_sell) {
+      const sell_price = Number(this.trading_table[table_index][7]);
+      if (current_price * (1 + max_rise_pct) >= sell_price) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      const buy_price = Number(this.trading_table[table_index][3]);
+      if (buy_price < this.target_price * this.grid_settings.MINIMUM_BUY_PCT) {
+        return false;
+      }
+      if (current_price * (1 - max_rise_pct) <= buy_price) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+  IsDisableRow(table_index) {
+    const price_pct = ToNumber(this.trading_table[table_index][1]);
+    if (price_pct < this.grid_settings.MINIMUM_BUY_PCT * 0.95) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  FindTradingGridRow(grid_name) {
+    for (let idx = 0; idx < this.trading_table.length; idx++) {
+      if (this.trading_table[idx][0] == grid_name) {
+        return this.trading_table[idx];
+      }
+    }
+    return [];
+  }
+  FindTradingGridRowIndex(grid_name) {
+    for (let idx = 0; idx < this.trading_table.length; idx++) {
+      if (this.trading_table[idx][0] == grid_name) {
+        return idx;
+      }
+    }
+    return -1;
+  }
+  SortTradingTable() {
+    if (this.trading_table.length <= 1) {
+      return;
+    }
+    this.trading_table.push(["\u505C\u6B62\u7EBF", "0%"]);
+    let move_idx = 0;
+    let move_row = null;
+    for (let idx = 1; idx < this.trading_table.length; idx++) {
+      if (this.trading_table[idx][1] == "0%") {
+        break;
+      }
+      if (this.IsDisableRow(idx)) {
+        move_idx = idx;
+        move_row = this.trading_table[move_idx];
+        for (let idx2 = move_idx; idx2 < this.trading_table.length - 1; idx2++) {
+          this.trading_table[idx2] = this.trading_table[idx2 + 1];
+          if (this.buy_monitor_rows.indexOf(idx2 + 1) != -1) {
+            this.buy_monitor_rows[this.buy_monitor_rows.indexOf(idx2 + 1)] = idx2;
+          }
+          if (this.buy_triggered_rows.indexOf(idx2 + 1) != -1) {
+            this.buy_triggered_rows[this.buy_triggered_rows.indexOf(idx2 + 1)] = idx2;
+          }
+          if (this.sell_monitor_rows.indexOf(idx2 + 1) != -1) {
+            this.sell_monitor_rows[this.sell_monitor_rows.indexOf(idx2 + 1)] = idx2;
+          }
+          if (this.sell_triggered_rows.indexOf(idx2 + 1) != -1) {
+            this.sell_triggered_rows[this.sell_triggered_rows.indexOf(idx2 + 1)] = idx2;
+          }
+        }
+        this.trading_table[this.trading_table.length - 1] = move_row;
+        idx--;
+      }
+    }
+  }
+};
+
+// src/grid_trading_views.ts
+var GridTradingViews = class {
   InitTradingOverview() {
     let paper_gain_ratio = ToTradingGap(this.total_cost, this.total_hold * this.current_price, 2);
     if (this.total_cost < 0) {
@@ -876,39 +952,13 @@ var GridTrading = class {
     if (this.buy_monitor_rows.length > 0 && !(this.is_pause || this.is_clear || this.is_cancel)) {
       for (let idx = 0; idx < this.buy_monitor_rows.length; idx++) {
         const row = this.buy_monitor_rows[idx];
-        const trading_gap = ToTradingGap(this.current_price, Number(this.trading_table[row][3]), 2);
-        this.stock_buy_overview.push([
-          GRID_COLOR_BUY_OVERVIEW,
-          String(this.target_stock),
-          this.stock_name,
-          this.trading_table[row][0],
-          this.trading_table[row][1],
-          this.trading_table[row][2],
-          this.trading_table[row][3],
-          this.trading_table[row][4],
-          this.trading_table[row][5],
-          trading_gap
-        ]);
+        this.stock_buy_overview.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], this.trading_table[row][10]]);
       }
     }
     this.stock_sell_overview = [];
-    if (this.sell_monitor_rows.length > 0 && !(this.is_clear || this.is_cancel)) {
-      for (let idx = 0; idx < this.sell_monitor_rows.length; idx++) {
-        const row = this.sell_monitor_rows[idx];
-        const trading_gap = ToTradingGap(this.current_price, Number(this.trading_table[row][7]), 2);
-        this.stock_sell_overview.push([
-          GRID_COLOR_SELL_OVERVIEW,
-          String(this.target_stock),
-          this.stock_name,
-          this.trading_table[row][0],
-          this.trading_table[row][1],
-          this.trading_table[row][6],
-          this.trading_table[row][7],
-          this.trading_table[row][8],
-          this.trading_table[row][9],
-          trading_gap
-        ]);
-      }
+    for (let idx = 0; idx < this.sell_monitor_rows.length; idx++) {
+      const row = this.sell_monitor_rows[idx];
+      this.stock_sell_overview.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], this.trading_table[row][11]]);
     }
     if (this.stock_active_filled_record.length > 0) {
       for (let idx = 0; idx < this.stock_active_filled_record.length; idx++) {
@@ -1351,237 +1401,185 @@ var GridTrading = class {
       ProportionPctStr(grid_total_cost, total_cost, 2)
     ];
   }
-  CalcHoldingPercent(grid_type, empty_price, clear_avg_price) {
-    const total_hold = this.total_hold;
-    const total_cost = this.total_cost;
-    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
-    let grid_total_hold = 0;
-    let grid_total_cost = 0;
-    let grid_empty_income = 0;
-    let grid_clear_income = 0;
-    for (let idx = 0; idx < this.holding_record.length; idx++) {
-      if (this.holding_record[idx][2].startsWith(grid_type)) {
-        const grid_hold = Number(this.holding_record[idx][4]);
-        const grid_cost = Number(this.holding_record[idx][3]) * Number(this.holding_record[idx][4]);
-        grid_total_hold += grid_hold;
-        grid_total_cost += grid_cost;
-        let grid_row = this.FindTradingGridRow(this.holding_record[idx][2]);
-        const empty_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * empty_price - grid_cost;
-        grid_empty_income += empty_income;
-        const clear_income = Number(grid_row[9]) + (grid_hold - Number(grid_row[8])) * clear_avg_price - grid_cost;
-        grid_clear_income += clear_income;
-      }
-    }
-    grid_total_cost = Math.ceil(grid_total_cost);
-    let grid_current_value = Math.floor(grid_total_hold * this.current_price);
-    this.holding_analysis.push([
-      grid_type,
-      String(grid_total_hold),
-      String(grid_total_cost),
-      String(grid_current_value),
-      AveragePriceStr(grid_total_cost, grid_total_hold, precision),
-      this.current_price.toFixed(precision),
-      String(grid_current_value - grid_total_cost),
-      grid_empty_income.toFixed(0),
-      grid_clear_income.toFixed(0),
-      ProportionPctStr(grid_total_hold, total_hold, 2),
-      ProportionPctStr(grid_total_cost, total_cost, 2)
-    ]);
+};
+
+// src/grid_trading.ts
+var GridTrading = class {
+  constructor(plugin_env) {
+    this.plugin_env = plugin_env;
+    this.grid_settings = plugin_env.grid_settings.Clone();
+    this.is_empty = true;
+    this.data_md5 = "";
+    this.is_debug = false;
+    this.is_pause = false;
+    this.is_clear = false;
+    this.is_cancel = false;
+    this.remote_current_price = -1;
+    this.debug_log = [];
+    this.stock_table = [];
+    this.param_table = [];
+    this.trading_table = [];
+    this.trading_interest = [];
+    this.trading_analysis = [];
+    this.trading_record = [];
+    this.trading_income = [];
+    this.holding_analysis = [];
+    this.holding_record = [];
+    this.stock_analysis = [];
+    this.adjust_record = [];
+    this.raw_trading_record = [];
+    this.raw_adjust_record = [];
+    this.raw_interest_record = [];
+    this.clear_sell_record = /* @__PURE__ */ new Map();
+    this.buy_grid_record = [];
+    this.sgrid_step_table = [];
+    this.mgrid_step_table = [];
+    this.lgrid_step_table = [];
+    this.force_view_grid_list = [];
+    this.buy_triggered_rows = [];
+    this.sell_triggered_rows = [];
+    this.buy_monitor_rows = [];
+    this.sell_monitor_rows = [];
+    this.disable_rows = [];
+    this.stock_buy_overview = [];
+    this.stock_sell_overview = [];
+    this.stock_passive_filled_record = [];
+    this.stock_active_filled_record = [];
+    this.stock_overview = [];
+    this.total_retain = 0;
+    this.retain_cost = 0;
+    this.total_hold = 0;
+    this.total_cost = 0;
   }
-  CalcTradingIncome(title_txt, slump_pct, empty_price, clear_avg_price, take_profit_price, clear_price, need_slump = true) {
-    let total_cost = this.total_cost;
-    let total_count = this.total_hold;
-    let empty_cost = this.total_cost;
-    let empty_count = this.total_hold;
-    let profit_cost = this.total_cost;
-    let profit_count = this.total_hold;
-    let clear_income_max = 0;
-    let take_profit_count = 0;
-    let clear_hold_max = 0;
-    let total_sell_cost = 0;
-    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
-    this.trading_table.forEach((row, i) => {
-      if (this.trading_table[i][0].startsWith("\u5229\u6DA6")) {
-        clear_income_max = clear_income_max + Number(this.trading_table[i][9]);
-        if (this.trading_table[i][0].startsWith("\u5229\u6DA61")) {
-          take_profit_count = take_profit_count + Number(this.trading_table[i][8]);
-        }
-      } else {
-        if (this.buy_grid_record.includes(this.trading_table[i][0])) {
-          empty_cost = empty_cost - Number(row[9]);
-          empty_count = empty_count - Number(row[8]);
-          clear_hold_max = clear_hold_max + (Number(row[4]) - Number(row[8]));
-          total_sell_cost = total_sell_cost + Number(row[9]);
-        } else {
-          if (i > 0 && ToNumber(row[1]) >= slump_pct && need_slump) {
-            total_cost = total_cost + Number(row[5]);
-            total_count = total_count + Number(row[4]);
-            empty_cost = empty_cost + Number(row[5]) - Number(row[9]);
-            empty_count = empty_count + Number(row[4]) - Number(row[8]);
-            clear_hold_max = clear_hold_max + (Number(row[4]) - Number(row[8]));
-            total_sell_cost = total_sell_cost + Number(row[9]);
-          }
-        }
-      }
-    });
-    clear_income_max = Math.floor(clear_income_max + clear_hold_max * clear_avg_price - empty_cost);
-    take_profit_count = take_profit_count + MyFloor(clear_hold_max * 0.4, this.grid_settings.MIN_BATCH_COUNT);
-    profit_cost = empty_cost - Math.floor(take_profit_count * take_profit_price);
-    profit_count = empty_count - take_profit_count;
-    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6301\u4ED3", total_count, total_cost, this.target_price * slump_pct, total_cost, this.total_cost, 0));
-    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6E05\u683C", empty_count, empty_cost, empty_price, total_cost, 0, total_sell_cost));
-    this.trading_income.push(this.GenerateIncomeRow(title_txt + "\u6B62\u76C8", profit_count, profit_cost, take_profit_price, total_cost, 0, total_sell_cost + Math.floor(take_profit_count * take_profit_price)));
-    this.trading_income.push([
-      title_txt + "\u6E05\u4ED3",
-      "0",
-      "0",
-      "0",
-      "-",
-      clear_price.toFixed(precision),
-      String(clear_income_max),
-      String(total_cost),
-      String(total_sell_cost + empty_cost + clear_income_max),
-      ToTradingGap(total_cost, total_sell_cost + empty_cost + clear_income_max, 2),
-      "-"
-    ]);
+  InitGridTrading(data) {
   }
-  GenerateClearRow(grid_name, idx, grid_step_pct, sell_count) {
-    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
-    const price_step = Math.floor((100 + Math.floor(grid_step_pct * 100)) ** idx / 100 ** (idx - 1)) / 100;
-    const sell_price = FixedPrice(this.target_price, price_step, precision);
-    let clear_count = this.clear_sell_record.get(grid_name + String(idx));
-    if (clear_count == void 0) {
-      clear_count = 0;
-    }
-    return [
-      grid_name + String(idx),
-      ToPercent(price_step),
-      "",
-      "",
-      "",
-      "",
-      (sell_price - this.grid_settings.TRIGGER_ADD_POINT).toFixed(precision),
-      sell_price.toFixed(precision),
-      String(sell_count - clear_count),
-      String(Math.ceil(sell_price * (sell_count - clear_count))),
-      "-",
-      "+" + ToPercent(grid_step_pct),
-      "-",
-      "-"
-    ];
+  UpdateRemotePrice(remote_price) {
   }
-  GenerateIncomeRow(grid_name, total_count, total_cost, current_price, max_cost, current_cost, sell_value) {
-    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
-    const current_value = MyFloor(total_count * current_price, 1);
-    const total_income = current_value - total_cost;
-    let position = ToPercent(current_cost / max_cost);
-    if (current_cost == 0) {
-      position = "-";
-    }
-    return [
-      grid_name,
-      String(total_count),
-      String(total_cost),
-      String(current_value),
-      (total_cost / Math.max(total_count, 1)).toFixed(precision),
-      current_price.toFixed(precision),
-      String(total_income),
-      String(max_cost),
-      String(sell_value + current_value),
-      ToTradingGap(max_cost, total_income + max_cost, 2),
-      position
-    ];
+  DebugLog(level, log_str, extra_info) {
+    this.debug_log.push([level, log_str, extra_info]);
   }
-  CalcClearPrice(step_pct, step_idx) {
-    const precision = this.grid_settings.TRADING_PRICE_PRECISION;
-    const price_step = Math.floor((100 + Math.floor(step_pct * 100)) ** step_idx / 100 ** (step_idx - 1)) / 100;
-    return FixedPrice(this.target_price, price_step, precision);
+  GetTradingTitle() {
+    return this.stock_name + "(" + String(this.target_stock) + ")";
   }
-  CalcGridIncomes(retain_count) {
-    const clear_pct = this.grid_settings.CLEAR_STEP_PCT;
-    const clear_avg_price = Number((this.CalcClearPrice(clear_pct, 1) * 0.4 + this.CalcClearPrice(clear_pct, 2) * 0.6).toFixed(this.grid_settings.TRADING_PRICE_PRECISION));
-    const first_clear_price = this.CalcClearPrice(clear_pct, 1);
-    return [retain_count * first_clear_price, retain_count * clear_avg_price];
-  }
-  IsNeedMonitor(table_index, is_sell, current_price, max_rise_pct) {
-    if (is_sell) {
-      const sell_price = Number(this.trading_table[table_index][7]);
-      if (current_price * (1 + max_rise_pct) >= sell_price) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      const buy_price = Number(this.trading_table[table_index][3]);
-      if (buy_price < this.target_price * this.grid_settings.MINIMUM_BUY_PCT) {
-        return false;
-      }
-      if (current_price * (1 - max_rise_pct) <= buy_price) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-  IsDisableRow(table_index) {
-    const price_pct = ToNumber(this.trading_table[table_index][1]);
-    if (price_pct < this.grid_settings.MINIMUM_BUY_PCT * 0.95) {
+  IsStock() {
+    if (this.is_empty == false && (this.market_code == "sz" || this.market_code == "sh")) {
       return true;
     } else {
       return false;
     }
   }
-  FindTradingGridRow(grid_name) {
-    for (let idx = 0; idx < this.trading_table.length; idx++) {
-      if (this.trading_table[idx][0] == grid_name) {
-        return this.trading_table[idx];
-      }
+  IsMonitor() {
+    if (this.is_empty || this.is_debug || this.is_clear || this.is_cancel) {
+      return false;
+    } else {
+      return true;
     }
-    return [];
   }
-  FindTradingGridRowIndex(grid_name) {
-    for (let idx = 0; idx < this.trading_table.length; idx++) {
-      if (this.trading_table[idx][0] == grid_name) {
-        return idx;
-      }
+  ParseRawData(data) {
+    const new_md5 = import_md5.Md5.hashStr(data);
+    if (new_md5 === this.data_md5) {
+      return false;
     }
-    return -1;
-  }
-  SortTradingTable() {
-    if (this.trading_table.length <= 1) {
-      return;
+    this.data_md5 = new_md5;
+    const lines = data.split("\n");
+    const strs = lines[0].split(",");
+    this.target_stock = Number(strs[1]);
+    this.stock_name = strs[2];
+    this.market_code = strs[3];
+    this.target_price = Number(strs[4]);
+    this.current_price = Number(strs[5]);
+    this.remote_current_price = this.plugin_env.GetStockRemotePrice(strs[1]);
+    if (this.remote_current_price > 0) {
+      this.current_price = this.remote_current_price;
     }
-    this.trading_table.push(["\u505C\u6B62\u7EBF", "0%"]);
-    let move_idx = 0;
-    let move_row = null;
-    for (let idx = 1; idx < this.trading_table.length; idx++) {
-      if (this.trading_table[idx][1] == "0%") {
-        break;
+    this.is_debug = false;
+    this.is_pause = false;
+    this.is_clear = false;
+    this.is_cancel = false;
+    this.grid_settings = this.plugin_env.grid_settings.Clone();
+    this.raw_trading_record = [];
+    this.raw_adjust_record = [];
+    this.raw_interest_record = [];
+    this.buy_grid_record = [];
+    this.sgrid_step_table = [];
+    this.mgrid_step_table = [];
+    this.lgrid_step_table = [];
+    this.clear_sell_record = /* @__PURE__ */ new Map();
+    this.force_view_grid_list = [];
+    for (let idx = 1; idx < lines.length; idx++) {
+      const strs2 = lines[idx].split(",");
+      if (strs2[0] == "BUY") {
+        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
+        this.buy_grid_record.push(strs2[2]);
       }
-      if (this.IsDisableRow(idx)) {
-        move_idx = idx;
-        move_row = this.trading_table[move_idx];
-        for (let idx2 = move_idx; idx2 < this.trading_table.length - 1; idx2++) {
-          this.trading_table[idx2] = this.trading_table[idx2 + 1];
-          if (this.buy_monitor_rows.indexOf(idx2 + 1) != -1) {
-            this.buy_monitor_rows[this.buy_monitor_rows.indexOf(idx2 + 1)] = idx2;
+      if (strs2[0] == "SELL") {
+        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
+        const i = this.buy_grid_record.indexOf(strs2[2]);
+        if (i >= 0) this.buy_grid_record.splice(i, 1);
+      }
+      if (strs2[0] == "SHARE") {
+        this.raw_trading_record.push([strs2[0], strs2[1], strs2[2], strs2[3], strs2[4]]);
+      }
+      if (strs2[0] == "BASE") {
+        this.grid_settings.UnpackBase(strs2);
+      }
+      if (strs2[0] == "STEP") {
+        this.grid_settings.UnpackStep(strs2);
+      }
+      if (strs2[0] == "INTEREST") {
+        this.grid_settings.UnpackInterest(strs2);
+      }
+      if (strs2[0] == "APY") {
+        this.raw_interest_record.push([strs2[1], strs2[2], strs2[3], strs2[4], strs2[5], strs2[6], strs2[7]]);
+      }
+      if (strs2[0] == "SGRID") {
+        this.sgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
+      }
+      if (strs2[0] == "MGRID") {
+        this.mgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
+      }
+      if (strs2[0] == "LGRID") {
+        this.lgrid_step_table.push([strs2[1], strs2[2], strs2[3], strs2[4]]);
+      }
+      if (strs2[0] == "ADJ") {
+        this.raw_adjust_record.push([strs2[1], strs2[2], strs2[3], strs2[4], strs2[5]]);
+      }
+      if (strs2[0] == "VIEW") {
+        for (let i = 1; i < strs2.length; i++)
+          if (strs2[i].trim().length > 0)
+            this.force_view_grid_list.push(strs2[i].trim());
+      }
+      if (strs2[0] == "CTRL") {
+        for (let i = 1; i < strs2.length; i++) {
+          if (strs2[i].trim() == "DEBUG") {
+            this.is_debug = true;
           }
-          if (this.buy_triggered_rows.indexOf(idx2 + 1) != -1) {
-            this.buy_triggered_rows[this.buy_triggered_rows.indexOf(idx2 + 1)] = idx2;
+          if (strs2[i].trim() == "PAUSE") {
+            this.is_pause = true;
           }
-          if (this.sell_monitor_rows.indexOf(idx2 + 1) != -1) {
-            this.sell_monitor_rows[this.sell_monitor_rows.indexOf(idx2 + 1)] = idx2;
+          if (strs2[i].trim() == "CLEAR") {
+            this.is_clear = true;
           }
-          if (this.sell_triggered_rows.indexOf(idx2 + 1) != -1) {
-            this.sell_triggered_rows[this.sell_triggered_rows.indexOf(idx2 + 1)] = idx2;
+          if (strs2[i].trim() == "CANCEL") {
+            this.is_cancel = true;
           }
         }
-        this.trading_table[this.trading_table.length - 1] = move_row;
-        idx--;
       }
     }
+    return true;
   }
 };
+function applyMixins(derivedCtor, baseCtors) {
+  baseCtors.forEach((baseCtor) => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+      if (name === "constructor") {
+        return;
+      }
+      Object.defineProperty(derivedCtor.prototype, name, Object.getOwnPropertyDescriptor(baseCtor.prototype, name));
+    });
+  });
+}
+applyMixins(GridTrading, [GridTradingCalc, GridTradingViews]);
 
 // src/grid_trading_m3.ts
 var GridTradingModeThree = class extends GridTrading {
@@ -1649,11 +1647,9 @@ var GridTradingModeThree = class extends GridTrading {
     }
     if (this.buy_triggered_rows.length > 0) {
       const last_buy = this.buy_triggered_rows[this.buy_triggered_rows.length - 1];
-      if (last_buy < this.sgrid_step_table.length)
-        this.buy_monitor_rows.push(last_buy + 1);
+      if (last_buy < this.sgrid_step_table.length) this.buy_monitor_rows.push(last_buy + 1);
       let last_sell = this.sell_triggered_rows.pop();
-      if (last_sell)
-        this.sell_monitor_rows.push(last_sell);
+      if (last_sell) this.sell_monitor_rows.push(last_sell);
       if (false) {
         const last_sell_s = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
         if (this.IsNeedMonitor(last_sell_s, true, this.current_price, max_rise_pct)) {
@@ -1695,8 +1691,7 @@ var GridTradingModeThree = class extends GridTrading {
       const last_sell_m = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_m, true, this.current_price, max_rise_pct)) {
         const i = this.sell_triggered_rows.indexOf(last_sell_m);
-        if (i >= 0)
-          this.sell_triggered_rows.splice(i, 1);
+        if (i >= 0) this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_m);
       }
     }
@@ -1728,8 +1723,7 @@ var GridTradingModeThree = class extends GridTrading {
       const last_sell_l = this.sell_triggered_rows[this.sell_triggered_rows.length - 1];
       if (this.IsNeedMonitor(last_sell_l, true, this.current_price, max_rise_pct)) {
         const i = this.sell_triggered_rows.indexOf(last_sell_l);
-        if (i >= 0)
-          this.sell_triggered_rows.splice(i, 1);
+        if (i >= 0) this.sell_triggered_rows.splice(i, 1);
         this.sell_monitor_rows.push(last_sell_l);
       }
     }
