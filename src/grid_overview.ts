@@ -2,7 +2,7 @@
     网格策略的总览视图
 */
 import { TextFileView, WorkspaceLeaf, TFile, TFolder, Vault } from "obsidian";
-import { GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_TABLE_TITLE, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW } from "./settings";
+import { ROW_TYPE_STOCK, ROW_TYPE_TITLE, ROW_TYPE_BUY, ROW_TYPE_SELL } from "./settings";
 import { GridTrading } from "./grid_trading";
 import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
 import { StringPlus, ToPercent, ToTradingGap, ProportionPctStr } from "./mymath";
@@ -84,12 +84,12 @@ export class GTOView extends TextFileView
         this.income_overview.push(["最大清格", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大止盈", "0", "0", "0", "0", "0", "0", "-"]);
         this.income_overview.push(["最大清盘", "0", "0", "0", "0", "0", "0", "-"]);
-        let stock_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "本金占比"]];
-        let buy_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
-        let sell_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
-        let passive_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
-        let active_table: string [][] = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"]];
-        this.interest_overview = [[GRID_COLOR_TABLE_TITLE, "标的代号", "标的名称", "计息时间", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
+        let stock_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "首网目标价", "当前价格", "价格百分位", "持仓股数", "消耗本金", "盈亏比率", "本金占比"]];
+        let buy_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "距成交价"]];
+        let sell_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "距成交价"]];
+        let passive_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "网格种类", "价格档位", "买入价格", "买入份数", "买入金额", "当前价格", "当前跌幅", "卖出价格", "卖出涨幅"]];
+        let active_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"]];
+        this.interest_overview = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "计息时间", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
                 "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "年化收益"]];
         const grid_folder = this.vault.getAbstractFileByPath('网格策略');
         let grid_file_names: string [] = [];
@@ -207,11 +207,11 @@ export class GTOView extends TextFileView
         for(let idx=0; idx<this.custom_stock_overview.length; idx++)
         {
             const stock = this.custom_stock_overview[idx];
-            if (stock[0] == GRID_COLOR_STOCK_OVERVIEW)
+            if (stock[0] == ROW_TYPE_STOCK)
             {
                 stock_count++;
             }
-            if (stock[0] == GRID_COLOR_BUY_OVERVIEW)
+            if (stock[0] == ROW_TYPE_BUY)
             {
                 buy_monitor_count++;
 
@@ -274,7 +274,7 @@ export class GTOView extends TextFileView
                     }
                 }
             }
-            if (stock[0] == GRID_COLOR_SELL_OVERVIEW)
+            if (stock[0] == ROW_TYPE_SELL)
             {
                 sell_monitor_count++;
 
@@ -370,6 +370,7 @@ export class GTOView extends TextFileView
 
     protected async onOpen(): Promise<void> 
     {
+        this.contentEl.addClass("grid-trading-view");
         let div = this.contentEl.createEl("div");
         this.overview_title_el = div.createEl("h1");
         this.overview_table_el = div.createEl("table");
@@ -457,19 +458,16 @@ export class GTOView extends TextFileView
         const table_body = table_el.createEl("tbody");
         table.forEach((row, i) => {
             const table_row = table_body.createEl("tr");
-    
+            if (is_color)
+            {
+                table_row.addClass(table[i][0]);
+            }
             row.forEach((cell, j) => {
-                if (is_color)
+                if (is_color && j == 0)
                 {
-                    if (j > 0) 
-                    {
-                        table_row.createEl("td", { text: cell, attr: {"bgColor": table[i][0], "align": "right"}});
-                    }
+                    return;
                 }
-                else
-                {
-                    table_row.createEl("td", { text: cell, attr: {"align": "right"}});
-                }
+                table_row.createEl("td", { text: cell, attr: {"align": "right"}});
             });
         });
     }

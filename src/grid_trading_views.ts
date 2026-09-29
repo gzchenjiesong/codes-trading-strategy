@@ -2,8 +2,8 @@
     网格策略视图生成（视图 mixin）
     各视图表格的生成方法，挂在 GridTrading 基类上
 */
-import { GRID_COLOR_STOCK_OVERVIEW, GRID_COLOR_BUY_OVERVIEW, GRID_COLOR_SELL_OVERVIEW, GRID_COLOR_SELL_MONITOR } from "./settings";
-import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_SELL_TRIGGERED } from "./settings";
+import { ROW_TYPE_STOCK, ROW_TYPE_BUY, ROW_TYPE_SELL, CELL_SELL_MONITOR } from "./settings";
+import { CELL_BUY_MONITOR, CELL_BUY_TRIGGERED, CELL_SELL_TRIGGERED } from "./settings";
 import { PERFIT_TYPE_NAME_STR } from "./lang_str";
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, TimeDuarion, AveragePriceStr, FixedPrice, NextInterestDate, ProportionPctStr, IsNumeric, AlignPrice, GetTodayStr } from "./mymath";
 import type { GridTrading } from "./grid_trading";
@@ -18,7 +18,7 @@ export class GridTradingViews
         {
             paper_gain_ratio = "+ ∞";
         }
-        this.stock_overview = [GRID_COLOR_STOCK_OVERVIEW, String(this.target_stock), this.stock_name, this.target_price.toFixed(3), this.current_price.toFixed(3),
+        this.stock_overview = [ROW_TYPE_STOCK, String(this.target_stock), this.stock_name, this.target_price.toFixed(3), this.current_price.toFixed(3),
                 ToPercent(this.current_price / this.target_price, 1), String(this.total_hold), String(this.total_cost),
                 paper_gain_ratio, this.trading_income[5][10]];
         this.stock_buy_overview = [];
@@ -27,14 +27,14 @@ export class GridTradingViews
             for (let idx=0; idx<this.buy_monitor_rows.length; idx++)
             {
                 const row = this.buy_monitor_rows[idx];
-                this.stock_buy_overview.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], this.trading_table[row][10]]);
+                this.stock_buy_overview.push([ROW_TYPE_BUY, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], this.trading_table[row][10]]);
             }
         }
         this.stock_sell_overview = [];
         for (let idx=0; idx<this.sell_monitor_rows.length; idx++)
         {
             const row = this.sell_monitor_rows[idx];
-            this.stock_sell_overview.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], this.trading_table[row][11]]);
+            this.stock_sell_overview.push([ROW_TYPE_SELL, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], this.trading_table[row][11]]);
         }
 
         if (this.stock_active_filled_record.length > 0)
@@ -285,11 +285,11 @@ export class GridTradingViews
                 }
                 if (Number(raw_record[idx][3]) == 0)
                 {
-                    this.stock_passive_filled_record.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], "", "", "", "", "", "", "", ""])
+                    this.stock_passive_filled_record.push([ROW_TYPE_BUY, String(this.target_stock), this.stock_name, raw_record[idx][2], "", "", "", "", "", "", "", ""])
                 }
                 if (raw_record[idx][2].startsWith("补仓"))
                 {
-                    this.stock_active_filled_record.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], raw_record[idx][1], raw_record[idx][3], raw_record[idx][4], String(cost_count), "", "", ""])
+                    this.stock_active_filled_record.push([ROW_TYPE_SELL, String(this.target_stock), this.stock_name, raw_record[idx][2], raw_record[idx][1], raw_record[idx][3], raw_record[idx][4], String(cost_count), "", "", ""])
                 }
             }
             else
@@ -369,7 +369,7 @@ export class GridTradingViews
         // 计息日期,当时首网价,当时持仓金额,买入价格,买入份数,止盈价位,卖出价格
         // APY,2025-12-09,0.951,325700,0.754,50100,110%,0
         this.trading_interest = [];
-        this.trading_interest.push([GRID_COLOR_STOCK_OVERVIEW, "计息日期", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
+        this.trading_interest.push([ROW_TYPE_STOCK, "计息日期", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
                 "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "年化收益"]);
         for (let idx=0; idx<this.raw_interest_record.length; idx++)
         {
@@ -385,16 +385,16 @@ export class GridTradingViews
             const buy_cost = MyFloor(buy_price * buy_count, 1);
             let sell_price_str = "-";
             let sell_gain = MyFloor(profit_price * buy_count, 1);
-            let color = GRID_COLOR_SELL_TRIGGERED;
+            let color = CELL_SELL_TRIGGERED;
             if (this.current_price * (1.0 + this.grid_settings.MAX_RISE_PCT) >= profit_price)
             {
-                color = GRID_COLOR_SELL_MONITOR;
+                color = CELL_SELL_MONITOR;
             }
             if (sell_price > 0)
             {
                 sell_price_str = row[6];
                 sell_gain = MyFloor(sell_price * buy_count, 1);
-                color = GRID_COLOR_BUY_TRIGGERED;
+                color = CELL_BUY_TRIGGERED;
             }
             this.trading_interest.push([color, row[0], row[2], ToPercent(buy_price / fst_price, 0), row[3], row[4], String(buy_cost), ToPercent(buy_cost / hold_cost, 2),
                     row[5], String(profit_price), sell_price_str, row[4], String(sell_gain), String(sell_gain - buy_cost), ToPercent((sell_gain - buy_cost) / hold_cost, 1)]);
@@ -409,10 +409,10 @@ export class GridTradingViews
         const buy_count = MyFloor((this.total_hold * this.grid_settings.INTEREST_RATE) / (profit_pct / current_pct - 1.0) / this.current_price, this.grid_settings.MIN_BATCH_COUNT)
         const sell_price = AlignPrice(this.target_price * profit_pct, this.grid_settings.TRADING_PRICE_PRECISION);
         const sell_income = (sell_price - this.current_price) * buy_count;
-        let color = GRID_COLOR_STOCK_OVERVIEW;
+        let color = ROW_TYPE_STOCK;
         if (GetTodayStr() > next_date)
         {
-            color = GRID_COLOR_SELL_MONITOR;
+            color = CELL_SELL_MONITOR;
         }
         this.trading_interest.push([color, "**" + next_date, String(this.total_hold), ToPercent(current_pct, 0), String(this.current_price), String(buy_count), (this.current_price * buy_count).toFixed(0),
                 ToPercent(this.current_price * buy_count / this.total_hold, 2), ToPercent(profit_pct, 0), String(sell_price), "-", String(buy_count), (sell_price * buy_count).toFixed(0),

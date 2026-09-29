@@ -5,16 +5,17 @@
 
 import { SETTING_NAME } from "./lang_str";
 
-// 颜色定义
-export const GRID_COLOR_BUY_MONITOR         = "#FFFF00";    // 黄色
-export const GRID_COLOR_SELL_MONITOR        = "#FFFF00";    // 黄色
-export const GRID_COLOR_BUY_TRIGGERED       = "#D3D3D3";    // 灰色
-export const GRID_COLOR_SELL_TRIGGERED      = "#FFFFE0";    // 浅黄
-export const GRID_COLOR_DISABLE             = "#FFFFE0";    // 深灰
-export const GRID_COLOR_STOCK_OVERVIEW      = "#FFFFFF";    // 同时肩负标记数据类型，故颜色值不能完全相等
-export const GRID_COLOR_TABLE_TITLE         = "#D3D3D3";    // 同时肩负标记数据类型，故颜色值不能完全相等
-export const GRID_COLOR_BUY_OVERVIEW        = "#FFFF01";    // 同时肩负标记数据类型，故颜色值不能完全相等
-export const GRID_COLOR_SELL_OVERVIEW       = "#FFFF00";    // 同时肩负标记数据类型，故颜色值不能完全相等
+// 行类型标记（第0列 + 比较，用于整行背景色 class）
+export const ROW_TYPE_STOCK = "grid-row-stock";      // 标的信息（默认无背景）
+export const ROW_TYPE_TITLE = "grid-row-title";      // 表头
+export const ROW_TYPE_BUY   = "grid-row-buy";        // 买入监控行（绿）
+export const ROW_TYPE_SELL  = "grid-row-sell";       // 卖出监控行（红）
+
+// 单元格状态标记（用于单元格背景色 class，买入=绿，卖出=红）
+export const CELL_BUY_MONITOR    = "grid-cell-buy-monitor";    // 买入监控（绿）
+export const CELL_BUY_TRIGGERED  = "grid-cell-buy-triggered";  // 买入已触发（浅绿）
+export const CELL_SELL_MONITOR   = "grid-cell-sell-monitor";   // 卖出监控（红）
+export const CELL_SELL_TRIGGERED = "grid-cell-sell-triggered"; // 卖出已触发（浅红）
 
 
 export function PackSettings<T>(settings: T): string

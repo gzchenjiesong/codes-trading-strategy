@@ -6,7 +6,7 @@
 import { TextFileView, WorkspaceLeaf } from "obsidian";
 import { GridTrading } from "./grid_trading";
 import { PluginEnv, FETCH_CURRENT_PRICE } from "./plugin_env";
-import { GRID_COLOR_BUY_MONITOR, GRID_COLOR_BUY_TRIGGERED, GRID_COLOR_DISABLE, GRID_COLOR_SELL_MONITOR, GRID_COLOR_SELL_TRIGGERED } from "./settings";
+import { CELL_BUY_MONITOR, CELL_BUY_TRIGGERED, CELL_SELL_MONITOR, CELL_SELL_TRIGGERED } from "./settings";
 import { DebugLog } from "./remote_util";
 
 
@@ -71,6 +71,7 @@ export class GTVView extends TextFileView
 
     protected async onOpen(): Promise<void> 
     {
+        this.contentEl.addClass("grid-trading-view");
         let div = this.contentEl.createEl("div");
         this.stock_tile_el = div.createEl("h1");
         this.stock_table_el = div.createEl("table");
@@ -192,30 +193,26 @@ export class GTVView extends TextFileView
                     const table_cell = table_row.createEl("td", { text: cell, attr: {"align": "right"}});
                     if (is_color && i > 0)
                     {
-                        //if (j == 0 && grid_trading.disable_rows.includes(i))
-                        //{
-                        //    table_cell.setAttr("bgColor", GRID_COLOR_DISABLE);
-                        //}
                         if (j <=5)
                         {
-                            if (grid_trading.buy_triggered_rows.includes(i))
-                            {
-                                table_cell.setAttr("bgColor", GRID_COLOR_BUY_TRIGGERED);
-                            }
                             if (grid_trading.buy_monitor_rows.includes(i))
                             {
-                                table_cell.setAttr("bgColor", GRID_COLOR_BUY_MONITOR);
+                                table_cell.addClass(CELL_BUY_MONITOR);
+                            }
+                            else if (grid_trading.buy_triggered_rows.includes(i))
+                            {
+                                table_cell.addClass(CELL_BUY_TRIGGERED);
                             }
                         }
                         else
                         {
-                            if (grid_trading.sell_triggered_rows.includes(i))
-                            {
-                                table_cell.setAttr("bgColor", GRID_COLOR_SELL_TRIGGERED);
-                            }
                             if (grid_trading.sell_monitor_rows.includes(i))
                             {
-                                table_cell.setAttr("bgColor", GRID_COLOR_SELL_MONITOR);
+                                table_cell.addClass(CELL_SELL_MONITOR);
+                            }
+                            else if (grid_trading.sell_triggered_rows.includes(i))
+                            {
+                                table_cell.addClass(CELL_SELL_TRIGGERED);
                             }
                         }
                     }
@@ -235,19 +232,16 @@ export class GTVView extends TextFileView
         const table_body = table_el.createEl("tbody");
         table.forEach((row, i) => {
             const table_row = table_body.createEl("tr");
-    
+            if (is_color)
+            {
+                table_row.addClass(table[i][0]);
+            }
             row.forEach((cell, j) => {
-                if (is_color)
+                if (is_color && j == 0)
                 {
-                    if (j > 0) 
-                    {
-                        table_row.createEl("td", { text: cell, attr: {"bgColor": table[i][0], "align": "right"}});
-                    }
+                    return;
                 }
-                else
-                {
-                    table_row.createEl("td", { text: cell, attr: {"align": "right"}});
-                }
+                table_row.createEl("td", { text: cell, attr: {"align": "right"}});
             });
         });
     }

@@ -1,14 +1,12 @@
 /*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
+    网格交易插件样式
+    颜色使用 Obsidian CSS 变量，自动适配 dark/light 主题
+    买入=绿色（股价下跌触发买入），卖出=红色（股价上涨触发卖出）
 */
+
 table
 {
-  border-collapse: collapse;
+    border-collapse: collapse;
 }
 
 table,td
@@ -19,13 +17,70 @@ table,td
 
 input
 {
-  background: gainsboro;
-  border: none;
-  font-size: medium;
-  margin-left: 4px;
+    background: var(--background-secondary);
+    border: none;
+    font-size: medium;
+    margin-left: 4px;
 }
 
 textarea
 {
-  margin-left: 8px;
+    margin-left: 8px;
+}
+
+/* 行类型背景色（第0列标记的 class，用于整行） */
+.grid-row-title
+{
+    background-color: var(--background-secondary);
+    font-weight: bold;
+}
+
+.grid-row-buy
+{
+    background-color: rgba(var(--color-green-rgb), 0.15);
+}
+
+.grid-row-sell
+{
+    background-color: rgba(var(--color-red-rgb), 0.15);
+}
+
+/* 单元格状态背景色（买入=绿，卖出=红） */
+.grid-cell-buy-monitor
+{
+    background-color: var(--color-green);
+    color: var(--text-on-accent);
+}
+
+.grid-cell-buy-triggered
+{
+    background-color: rgba(var(--color-green-rgb), 0.3);
+}
+
+.grid-cell-sell-monitor
+{
+    background-color: var(--color-red);
+    color: var(--text-on-accent);
+}
+
+.grid-cell-sell-triggered
+{
+    background-color: rgba(var(--color-red-rgb), 0.3);
+}
+
+/* 移动端适配：表格横向滚动 */
+body.is-mobile .grid-trading-view > div
+{
+    overflow-x: auto;
+}
+
+body.is-mobile .grid-trading-view table
+{
+    white-space: nowrap;
+    font-size: 0.85em;
+}
+
+body.is-mobile .grid-trading-view td
+{
+    padding: 2px 4px;
 }

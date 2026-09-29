@@ -402,14 +402,14 @@ var SETTING_NAME = /* @__PURE__ */ new Map([
 var PERFIT_TYPE_NAME_STR = "\u5229\u6DA6";
 
 // src/settings.ts
-var GRID_COLOR_BUY_MONITOR = "#FFFF00";
-var GRID_COLOR_SELL_MONITOR = "#FFFF00";
-var GRID_COLOR_BUY_TRIGGERED = "#D3D3D3";
-var GRID_COLOR_SELL_TRIGGERED = "#FFFFE0";
-var GRID_COLOR_STOCK_OVERVIEW = "#FFFFFF";
-var GRID_COLOR_TABLE_TITLE = "#D3D3D3";
-var GRID_COLOR_BUY_OVERVIEW = "#FFFF01";
-var GRID_COLOR_SELL_OVERVIEW = "#FFFF00";
+var ROW_TYPE_STOCK = "grid-row-stock";
+var ROW_TYPE_TITLE = "grid-row-title";
+var ROW_TYPE_BUY = "grid-row-buy";
+var ROW_TYPE_SELL = "grid-row-sell";
+var CELL_BUY_MONITOR = "grid-cell-buy-monitor";
+var CELL_BUY_TRIGGERED = "grid-cell-buy-triggered";
+var CELL_SELL_MONITOR = "grid-cell-sell-monitor";
+var CELL_SELL_TRIGGERED = "grid-cell-sell-triggered";
 function PackSettings(settings) {
   let pack_str = "";
   let key;
@@ -881,7 +881,7 @@ var GridTradingViews = class {
       paper_gain_ratio = "+ \u221E";
     }
     this.stock_overview = [
-      GRID_COLOR_STOCK_OVERVIEW,
+      ROW_TYPE_STOCK,
       String(this.target_stock),
       this.stock_name,
       this.target_price.toFixed(3),
@@ -896,13 +896,13 @@ var GridTradingViews = class {
     if (this.buy_monitor_rows.length > 0 && !(this.is_pause || this.is_clear || this.is_cancel)) {
       for (let idx = 0; idx < this.buy_monitor_rows.length; idx++) {
         const row = this.buy_monitor_rows[idx];
-        this.stock_buy_overview.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], this.trading_table[row][10]]);
+        this.stock_buy_overview.push([ROW_TYPE_BUY, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][2], this.trading_table[row][3], this.trading_table[row][4], this.trading_table[row][5], this.trading_table[row][10]]);
       }
     }
     this.stock_sell_overview = [];
     for (let idx = 0; idx < this.sell_monitor_rows.length; idx++) {
       const row = this.sell_monitor_rows[idx];
-      this.stock_sell_overview.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], this.trading_table[row][11]]);
+      this.stock_sell_overview.push([ROW_TYPE_SELL, String(this.target_stock), this.stock_name, this.trading_table[row][0], this.trading_table[row][1], this.trading_table[row][6], this.trading_table[row][7], this.trading_table[row][8], this.trading_table[row][9], this.trading_table[row][11]]);
     }
     if (this.stock_active_filled_record.length > 0) {
       for (let idx = 0; idx < this.stock_active_filled_record.length; idx++) {
@@ -1104,10 +1104,10 @@ var GridTradingViews = class {
           this.holding_record.push([raw_record[idx][0], raw_record[idx][1], raw_record[idx][2], raw_record[idx][3], raw_record[idx][4]]);
         }
         if (Number(raw_record[idx][3]) == 0) {
-          this.stock_passive_filled_record.push([GRID_COLOR_BUY_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], "", "", "", "", "", "", "", ""]);
+          this.stock_passive_filled_record.push([ROW_TYPE_BUY, String(this.target_stock), this.stock_name, raw_record[idx][2], "", "", "", "", "", "", "", ""]);
         }
         if (raw_record[idx][2].startsWith("\u8865\u4ED3")) {
-          this.stock_active_filled_record.push([GRID_COLOR_SELL_OVERVIEW, String(this.target_stock), this.stock_name, raw_record[idx][2], raw_record[idx][1], raw_record[idx][3], raw_record[idx][4], String(cost_count), "", "", ""]);
+          this.stock_active_filled_record.push([ROW_TYPE_SELL, String(this.target_stock), this.stock_name, raw_record[idx][2], raw_record[idx][1], raw_record[idx][3], raw_record[idx][4], String(cost_count), "", "", ""]);
         }
       } else {
         if (raw_record[idx][0] == "SHARE") {
@@ -1167,7 +1167,7 @@ var GridTradingViews = class {
   InitTradingInterest() {
     this.trading_interest = [];
     this.trading_interest.push([
-      GRID_COLOR_STOCK_OVERVIEW,
+      ROW_TYPE_STOCK,
       "\u8BA1\u606F\u65E5\u671F",
       "\u5F53\u65F6\u6301\u4ED3",
       "\u5F53\u65F6\u4EF7\u4F4D",
@@ -1196,14 +1196,14 @@ var GridTradingViews = class {
       const buy_cost = MyFloor(buy_price * buy_count2, 1);
       let sell_price_str = "-";
       let sell_gain = MyFloor(profit_price * buy_count2, 1);
-      let color2 = GRID_COLOR_SELL_TRIGGERED;
+      let color2 = CELL_SELL_TRIGGERED;
       if (this.current_price * (1 + this.grid_settings.MAX_RISE_PCT) >= profit_price) {
-        color2 = GRID_COLOR_SELL_MONITOR;
+        color2 = CELL_SELL_MONITOR;
       }
       if (sell_price2 > 0) {
         sell_price_str = row[6];
         sell_gain = MyFloor(sell_price2 * buy_count2, 1);
-        color2 = GRID_COLOR_BUY_TRIGGERED;
+        color2 = CELL_BUY_TRIGGERED;
       }
       this.trading_interest.push([
         color2,
@@ -1232,9 +1232,9 @@ var GridTradingViews = class {
     const buy_count = MyFloor(this.total_hold * this.grid_settings.INTEREST_RATE / (profit_pct / current_pct - 1) / this.current_price, this.grid_settings.MIN_BATCH_COUNT);
     const sell_price = AlignPrice(this.target_price * profit_pct, this.grid_settings.TRADING_PRICE_PRECISION);
     const sell_income = (sell_price - this.current_price) * buy_count;
-    let color = GRID_COLOR_STOCK_OVERVIEW;
+    let color = ROW_TYPE_STOCK;
     if (GetTodayStr() > next_date) {
-      color = GRID_COLOR_SELL_MONITOR;
+      color = CELL_SELL_MONITOR;
     }
     this.trading_interest.push([
       color,
@@ -1802,6 +1802,7 @@ var GTVView = class extends import_obsidian2.TextFileView {
     return VIEW_TYPE_GTV;
   }
   async onOpen() {
+    this.contentEl.addClass("grid-trading-view");
     let div = this.contentEl.createEl("div");
     this.stock_tile_el = div.createEl("h1");
     this.stock_table_el = div.createEl("table");
@@ -1888,18 +1889,16 @@ var GTVView = class extends import_obsidian2.TextFileView {
           const table_cell = table_row.createEl("td", { text: cell, attr: { "align": "right" } });
           if (is_color && i > 0) {
             if (j <= 5) {
-              if (grid_trading.buy_triggered_rows.includes(i)) {
-                table_cell.setAttr("bgColor", GRID_COLOR_BUY_TRIGGERED);
-              }
               if (grid_trading.buy_monitor_rows.includes(i)) {
-                table_cell.setAttr("bgColor", GRID_COLOR_BUY_MONITOR);
+                table_cell.addClass(CELL_BUY_MONITOR);
+              } else if (grid_trading.buy_triggered_rows.includes(i)) {
+                table_cell.addClass(CELL_BUY_TRIGGERED);
               }
             } else {
-              if (grid_trading.sell_triggered_rows.includes(i)) {
-                table_cell.setAttr("bgColor", GRID_COLOR_SELL_TRIGGERED);
-              }
               if (grid_trading.sell_monitor_rows.includes(i)) {
-                table_cell.setAttr("bgColor", GRID_COLOR_SELL_MONITOR);
+                table_cell.addClass(CELL_SELL_MONITOR);
+              } else if (grid_trading.sell_triggered_rows.includes(i)) {
+                table_cell.addClass(CELL_SELL_TRIGGERED);
               }
             }
           }
@@ -1916,14 +1915,14 @@ var GTVView = class extends import_obsidian2.TextFileView {
     const table_body = table_el.createEl("tbody");
     table.forEach((row, i) => {
       const table_row = table_body.createEl("tr");
+      if (is_color) {
+        table_row.addClass(table[i][0]);
+      }
       row.forEach((cell, j) => {
-        if (is_color) {
-          if (j > 0) {
-            table_row.createEl("td", { text: cell, attr: { "bgColor": table[i][0], "align": "right" } });
-          }
-        } else {
-          table_row.createEl("td", { text: cell, attr: { "align": "right" } });
+        if (is_color && j == 0) {
+          return;
         }
+        table_row.createEl("td", { text: cell, attr: { "align": "right" } });
       });
     });
   }
@@ -1969,13 +1968,13 @@ var GTOView = class extends import_obsidian3.TextFileView {
     this.income_overview.push(["\u6700\u5927\u6E05\u683C", "0", "0", "0", "0", "0", "0", "-"]);
     this.income_overview.push(["\u6700\u5927\u6B62\u76C8", "0", "0", "0", "0", "0", "0", "-"]);
     this.income_overview.push(["\u6700\u5927\u6E05\u76D8", "0", "0", "0", "0", "0", "0", "-"]);
-    let stock_table = [[GRID_COLOR_TABLE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u9996\u7F51\u76EE\u6807\u4EF7", "\u5F53\u524D\u4EF7\u683C", "\u4EF7\u683C\u767E\u5206\u4F4D", "\u6301\u4ED3\u80A1\u6570", "\u6D88\u8017\u672C\u91D1", "\u76C8\u4E8F\u6BD4\u7387", "\u672C\u91D1\u5360\u6BD4"]];
-    let buy_table = [[GRID_COLOR_TABLE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u4E70\u5165\u89E6\u53D1\u4EF7", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u8DDD\u6210\u4EA4\u4EF7"]];
-    let sell_table = [[GRID_COLOR_TABLE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u5356\u51FA\u89E6\u53D1\u4EF7", "\u5356\u51FA\u4EF7\u683C", "\u5356\u51FA\u4EFD\u6570", "\u5356\u51FA\u91D1\u989D", "\u8DDD\u6210\u4EA4\u4EF7"]];
-    let passive_table = [[GRID_COLOR_TABLE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u5F53\u524D\u4EF7\u683C", "\u5F53\u524D\u8DCC\u5E45", "\u5356\u51FA\u4EF7\u683C", "\u5356\u51FA\u6DA8\u5E45"]];
-    let active_table = [[GRID_COLOR_TABLE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EA4\u6613\u65E5\u671F", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u5F53\u524D\u4EF7\u683C", "\u6301\u4ED3\u6536\u76CA", "\u5356\u51FA\u4EFD\u6570", "\u7D2F\u79EF\u7B79\u7801"]];
+    let stock_table = [[ROW_TYPE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u9996\u7F51\u76EE\u6807\u4EF7", "\u5F53\u524D\u4EF7\u683C", "\u4EF7\u683C\u767E\u5206\u4F4D", "\u6301\u4ED3\u80A1\u6570", "\u6D88\u8017\u672C\u91D1", "\u76C8\u4E8F\u6BD4\u7387", "\u672C\u91D1\u5360\u6BD4"]];
+    let buy_table = [[ROW_TYPE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u4E70\u5165\u89E6\u53D1\u4EF7", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u8DDD\u6210\u4EA4\u4EF7"]];
+    let sell_table = [[ROW_TYPE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u5356\u51FA\u89E6\u53D1\u4EF7", "\u5356\u51FA\u4EF7\u683C", "\u5356\u51FA\u4EFD\u6570", "\u5356\u51FA\u91D1\u989D", "\u8DDD\u6210\u4EA4\u4EF7"]];
+    let passive_table = [[ROW_TYPE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EF7\u683C\u6863\u4F4D", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u5F53\u524D\u4EF7\u683C", "\u5F53\u524D\u8DCC\u5E45", "\u5356\u51FA\u4EF7\u683C", "\u5356\u51FA\u6DA8\u5E45"]];
+    let active_table = [[ROW_TYPE_TITLE, "\u6807\u7684\u4EE3\u53F7", "\u6807\u7684\u540D\u79F0", "\u7F51\u683C\u79CD\u7C7B", "\u4EA4\u6613\u65E5\u671F", "\u4E70\u5165\u4EF7\u683C", "\u4E70\u5165\u4EFD\u6570", "\u4E70\u5165\u91D1\u989D", "\u5F53\u524D\u4EF7\u683C", "\u6301\u4ED3\u6536\u76CA", "\u5356\u51FA\u4EFD\u6570", "\u7D2F\u79EF\u7B79\u7801"]];
     this.interest_overview = [[
-      GRID_COLOR_TABLE_TITLE,
+      ROW_TYPE_TITLE,
       "\u6807\u7684\u4EE3\u53F7",
       "\u6807\u7684\u540D\u79F0",
       "\u8BA1\u606F\u65F6\u95F4",
@@ -2088,10 +2087,10 @@ var GTOView = class extends import_obsidian3.TextFileView {
     let sell_monitor_count = 0;
     for (let idx = 0; idx < this.custom_stock_overview.length; idx++) {
       const stock = this.custom_stock_overview[idx];
-      if (stock[0] == GRID_COLOR_STOCK_OVERVIEW) {
+      if (stock[0] == ROW_TYPE_STOCK) {
         stock_count++;
       }
-      if (stock[0] == GRID_COLOR_BUY_OVERVIEW) {
+      if (stock[0] == ROW_TYPE_BUY) {
         buy_monitor_count++;
         this.stock_overview[4][1] = StringPlus(this.stock_overview[4][1], stock[8], 1);
         if (stock[3].startsWith("\u5C0F\u7F51")) {
@@ -2138,7 +2137,7 @@ var GTOView = class extends import_obsidian3.TextFileView {
           }
         }
       }
-      if (stock[0] == GRID_COLOR_SELL_OVERVIEW) {
+      if (stock[0] == ROW_TYPE_SELL) {
         sell_monitor_count++;
         this.stock_overview[4][6] = StringPlus(this.stock_overview[4][6], stock[8], 1);
         if (stock[3].startsWith("\u5C0F\u7F51")) {
@@ -2206,6 +2205,7 @@ var GTOView = class extends import_obsidian3.TextFileView {
     return VIEW_TYPE_GTO;
   }
   async onOpen() {
+    this.contentEl.addClass("grid-trading-view");
     let div = this.contentEl.createEl("div");
     this.overview_title_el = div.createEl("h1");
     this.overview_table_el = div.createEl("table");
@@ -2262,14 +2262,14 @@ var GTOView = class extends import_obsidian3.TextFileView {
     const table_body = table_el.createEl("tbody");
     table.forEach((row, i) => {
       const table_row = table_body.createEl("tr");
+      if (is_color) {
+        table_row.addClass(table[i][0]);
+      }
       row.forEach((cell, j) => {
-        if (is_color) {
-          if (j > 0) {
-            table_row.createEl("td", { text: cell, attr: { "bgColor": table[i][0], "align": "right" } });
-          }
-        } else {
-          table_row.createEl("td", { text: cell, attr: { "align": "right" } });
+        if (is_color && j == 0) {
+          return;
         }
+        table_row.createEl("td", { text: cell, attr: { "align": "right" } });
       });
     });
   }
