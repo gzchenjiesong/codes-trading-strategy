@@ -229,10 +229,6 @@ export class GridTrading
             {
                 this.grid_settings.UnpackBase(strs);
             }
-            if (strs[0] == "STEP")
-            {
-                this.grid_settings.UnpackStep(strs);
-            }
             if (strs[0] == "INTEREST")
             {
                 this.grid_settings.UnpackInterest(strs);

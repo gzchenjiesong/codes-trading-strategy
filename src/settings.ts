@@ -79,18 +79,6 @@ export class GridTradingSettings {
     CLEAR_STEP_PCT: number;
     BOTTOM_BUY_PCT: number;
 
-    SGRID_STEP_PCT: number;
-    SGRID_ADD_PCT: number;
-    SGRID_RETAIN_COUNT: number;
-
-    MGRID_STEP_PCT: number;
-    MGRID_ADD_PCT: number;
-    MGRID_RETAIN_COUNT: number;
-
-    LGRID_STEP_PCT: number;
-    LGRID_ADD_PCT: number;
-    LGRID_RETAIN_COUNT: number;
-
     INTEREST_YEAR: number;
     INTEREST_RATE: number;
     INTEREST_STEP: number;
@@ -109,18 +97,6 @@ export class GridTradingSettings {
         this.MINIMUM_BUY_PCT = 0.1;
         this.BOTTOM_BUY_PCT = 0.2
     
-        this.SGRID_STEP_PCT = 0.05;
-        this.SGRID_ADD_PCT = 0.05;
-        this.SGRID_RETAIN_COUNT = 4;
-
-        this.MGRID_STEP_PCT = 0.22;
-        this.MGRID_ADD_PCT = 0.2;
-        this.MGRID_RETAIN_COUNT = 2;
-
-        this.LGRID_STEP_PCT = 0.52;
-        this.LGRID_ADD_PCT = 0.5;
-        this.LGRID_RETAIN_COUNT = 1;
-
         this.INTEREST_YEAR = 2025;
         this.INTEREST_RATE = 0.045;
         this.INTEREST_STEP = 40;
@@ -139,18 +115,6 @@ export class GridTradingSettings {
         clone.CLEAR_STEP_PCT = this.CLEAR_STEP_PCT;
         clone.MINIMUM_BUY_PCT = this.MINIMUM_BUY_PCT;
         clone.BOTTOM_BUY_PCT = this.BOTTOM_BUY_PCT;
-    
-        clone.SGRID_STEP_PCT = this.SGRID_STEP_PCT;
-        clone.SGRID_ADD_PCT = this.SGRID_ADD_PCT;
-        clone.SGRID_RETAIN_COUNT = this.SGRID_RETAIN_COUNT;
-    
-        clone.MGRID_STEP_PCT = this.MGRID_STEP_PCT;
-        clone.MGRID_ADD_PCT = this.MGRID_ADD_PCT;
-        clone.MGRID_RETAIN_COUNT = this.MGRID_RETAIN_COUNT;
-    
-        clone.LGRID_STEP_PCT = this.LGRID_STEP_PCT;
-        clone.LGRID_ADD_PCT = this.LGRID_ADD_PCT;
-        clone.LGRID_RETAIN_COUNT = this.LGRID_RETAIN_COUNT;
         return clone;
     }
 
@@ -175,31 +139,6 @@ export class GridTradingSettings {
         this.MIN_BATCH_COUNT = Number(strs[5]);
         this.MAX_RISE_PCT = Number(strs[6]);
         this.CLEAR_STEP_PCT = Number(strs[7]);
-    }
-
-    PackStep(): string
-    {
-        const setting = ["STEP", String(this.SGRID_STEP_PCT), String(this.SGRID_ADD_PCT), String(this.SGRID_RETAIN_COUNT),
-                        String(this.MGRID_STEP_PCT), String(this.MGRID_ADD_PCT), String(this.MGRID_RETAIN_COUNT),
-                        String(this.LGRID_STEP_PCT), String(this.LGRID_ADD_PCT), String(this.LGRID_RETAIN_COUNT)]
-        return setting.join(",");
-    }
-
-    UnpackStep(strs: string[])
-    {
-        if (strs.length != 10)
-        {
-            return;
-        }
-        this.SGRID_STEP_PCT = Number(strs[1]);
-        this.SGRID_ADD_PCT = Number(strs[2]);
-        this.SGRID_RETAIN_COUNT = Number(strs[3]);
-        this.MGRID_STEP_PCT = Number(strs[4]);
-        this.MGRID_ADD_PCT = Number(strs[5]);
-        this.MGRID_RETAIN_COUNT = Number(strs[6]);
-        this.LGRID_STEP_PCT = Number(strs[7]);
-        this.LGRID_ADD_PCT = Number(strs[8]);
-        this.LGRID_RETAIN_COUNT = Number(strs[9]);
     }
 
     PackQuant(): string

@@ -2,7 +2,6 @@
     网格策略的计算逻辑，模式3
     特殊历史原因带来的一些网格策略，需要手动设置网格每个格子的步进值
 */
-
 import { MyFloor, MyCeil, ToPercent, ToNumber, ToTradingGap, FixedPrice } from "./mymath";
 import { PluginEnv } from "./plugin_env";
 import { GridTrading } from "./grid_trading";
@@ -62,32 +61,36 @@ export class GridTradingModeThree extends GridTrading
         this.disable_rows = []
         this.trading_table = []
         this.trading_table[0] = ["网格种类", "价格档位", "买入触发价", "买入价格", "买入份数", "买入金额", "卖出触发价", "卖出价格", "卖出份数", "卖出金额", "相对跌幅", "相对涨幅", "止盈获利", "清仓获利"];
-        //this.trading_interest.push(["计息日期", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "持仓利率"]);
 
         const max_rise_pct = this.grid_settings.MAX_RISE_PCT;
-        let grid_sell_pct = 1.0 + this.grid_settings.SGRID_STEP_PCT
-        for (let idx=0; idx<this.sgrid_step_table.length; idx++)
+        // 各网买入格数（step_table[0] 是第0格卖出参考，不渲染为买入格）
+        const sgrid_count = this.sgrid_step_table.length - 1;
+        const mgrid_count = this.mgrid_step_table.length - 1;
+        const lgrid_count = this.lgrid_step_table.length - 1;
+
+        // 小网：trading_table 索引 1 ~ sgrid_count
+        for (let idx=1; idx<=sgrid_count; idx++)
         {
-            let grid_buy_pct = ToNumber(this.sgrid_step_table[idx][1])
-            this.trading_table[idx + 1] = this.GenerateOneRow(this.sgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
+            const grid_buy_pct = ToNumber(this.sgrid_step_table[idx][1]);
+            const grid_sell_pct = ToNumber(this.sgrid_step_table[idx - 1][1]);
+            this.trading_table[idx] = this.GenerateOneRow(this.sgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
                     Number(this.sgrid_step_table[idx][2]), Number(this.sgrid_step_table[idx][3]));
-            grid_sell_pct = grid_buy_pct;
             
-            if (this.IsDisableRow(idx + 1))
+            if (this.IsDisableRow(idx))
             {
-                this.disable_rows.push(idx + 1);
+                this.disable_rows.push(idx);
             }
-            if (this.buy_grid_record.includes(this.trading_table[idx + 1][0]))
+            if (this.buy_grid_record.includes(this.trading_table[idx][0]))
             {
-                this.buy_triggered_rows.push(idx + 1);
-                this.sell_triggered_rows.push(idx + 1);
+                this.buy_triggered_rows.push(idx);
+                this.sell_triggered_rows.push(idx);
             }
         }
         if (this.buy_triggered_rows.length > 0)
         {
             // 小网
             const last_buy = this.buy_triggered_rows[this.buy_triggered_rows.length - 1];
-            if (last_buy < this.sgrid_step_table.length) this.buy_monitor_rows.push(last_buy + 1);
+            if (last_buy < sgrid_count) this.buy_monitor_rows.push(last_buy + 1);
             let last_sell = this.sell_triggered_rows.pop();
             if (last_sell) this.sell_monitor_rows.push(last_sell);
             //if (this.sell_triggered_rows.length > 0)
@@ -110,29 +113,29 @@ export class GridTradingModeThree extends GridTrading
                 this.buy_monitor_rows.push(first_buy);
             }
         }
-        let start_index = this.sgrid_step_table.length + 1;
-        grid_sell_pct = 1.0 + this.grid_settings.MGRID_STEP_PCT;
-        for (let idx=0; idx<this.mgrid_step_table.length; idx++)
+        // 中网：trading_table 索引 sgrid_count+1 ~ sgrid_count+mgrid_count
+        let start_index = sgrid_count + 1;
+        for (let idx=1; idx<=mgrid_count; idx++)
         {
-            let grid_buy_pct = ToNumber(this.mgrid_step_table[idx][1])
-            this.trading_table[start_index + idx] = this.GenerateOneRow(this.mgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
+            const grid_buy_pct = ToNumber(this.mgrid_step_table[idx][1]);
+            const grid_sell_pct = ToNumber(this.mgrid_step_table[idx - 1][1]);
+            this.trading_table[start_index + idx - 1] = this.GenerateOneRow(this.mgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
                     Number(this.mgrid_step_table[idx][2]), Number(this.mgrid_step_table[idx][3]));
-            grid_sell_pct = grid_buy_pct;
-            if (this.IsDisableRow(start_index + idx))
+            if (this.IsDisableRow(start_index + idx - 1))
             {
-                this.disable_rows.push(start_index + idx);
+                this.disable_rows.push(start_index + idx - 1);
             }
-            if (this.buy_grid_record.includes(this.trading_table[start_index + idx][0]))
+            if (this.buy_grid_record.includes(this.trading_table[start_index + idx - 1][0]))
             {
-                this.buy_triggered_rows.push(start_index + idx);
-                this.sell_triggered_rows.push(start_index + idx);
+                this.buy_triggered_rows.push(start_index + idx - 1);
+                this.sell_triggered_rows.push(start_index + idx - 1);
             }
             else
             {
                 // 判断是否挂中网买单监控
-                if (this.IsNeedMonitor(start_index + idx, false, this.current_price, max_rise_pct))
+                if (this.IsNeedMonitor(start_index + idx - 1, false, this.current_price, max_rise_pct))
                 {
-                    this.buy_monitor_rows.push(start_index + idx);
+                    this.buy_monitor_rows.push(start_index + idx - 1);
                 }
             }
         }
@@ -147,32 +150,31 @@ export class GridTradingModeThree extends GridTrading
                 this.sell_monitor_rows.push(last_sell_m);
             }
         }
-        start_index = this.sgrid_step_table.length + this.mgrid_step_table.length + 1;
-        grid_sell_pct = 1.0 + this.grid_settings.LGRID_STEP_PCT;
-        for (let idx=0; idx<this.lgrid_step_table.length; idx++)
+        // 大网：trading_table 索引 sgrid_count+mgrid_count+1 起
+        start_index = sgrid_count + mgrid_count + 1;
+        for (let idx=1; idx<=lgrid_count; idx++)
         {
-            let grid_buy_pct = ToNumber(this.lgrid_step_table[idx][1])
-            this.trading_table[start_index + idx] = this.GenerateOneRow(this.lgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
+            const grid_buy_pct = ToNumber(this.lgrid_step_table[idx][1]);
+            const grid_sell_pct = ToNumber(this.lgrid_step_table[idx - 1][1]);
+            this.trading_table[start_index + idx - 1] = this.GenerateOneRow(this.lgrid_step_table[idx][0], grid_buy_pct, grid_sell_pct,
                     Number(this.lgrid_step_table[idx][2]), Number(this.lgrid_step_table[idx][3]));
-            grid_sell_pct = grid_buy_pct;
-            if (this.IsDisableRow(start_index + idx))
+            if (this.IsDisableRow(start_index + idx - 1))
             {
-                this.disable_rows.push(start_index + idx);
+                this.disable_rows.push(start_index + idx - 1);
             }
-            if (this.buy_grid_record.includes(this.trading_table[start_index + idx][0]))
+            if (this.buy_grid_record.includes(this.trading_table[start_index + idx - 1][0]))
             {
-                this.buy_triggered_rows.push(start_index + idx);
-                this.sell_triggered_rows.push(start_index + idx);
+                this.buy_triggered_rows.push(start_index + idx - 1);
+                this.sell_triggered_rows.push(start_index + idx - 1);
             }
             else
             {
                 // 判断是否挂大网买单监控
-                if (this.IsNeedMonitor(start_index + idx, false, this.current_price, max_rise_pct))
+                if (this.IsNeedMonitor(start_index + idx - 1, false, this.current_price, max_rise_pct))
                 {
-                    this.buy_monitor_rows.push(start_index + idx);
+                    this.buy_monitor_rows.push(start_index + idx - 1);
                 }
             }
-            
         }
         if (this.sell_triggered_rows.length > 0 && this.sell_triggered_rows[this.sell_triggered_rows.length - 1] >= start_index)
         {

@@ -6,15 +6,6 @@ export const SETTING_NAME = new Map<string, string>([
     ["TRADING_PRICE_PRECISION", "交易价精度"],
     ["MIN_BATCH_COUNT", "单手份数额"],
     ["MAX_RISE_PCT", "单日最大涨幅"],
-    ["SGRID_STEP_PCT", "小网步进值"],
-    ["SGRID_RETAIN_COUNT", "保留利润数"],
-    ["SGRID_ADD_PCT", "每网追加"],
-    ["MGRID_STEP_PCT", "中网步进值"],
-    ["MGRID_RETAIN_COUNT", "保留利润数"],
-    ["MGRID_ADD_PCT", "每网追加"],
-    ["LGRID_STEP_PCT", "大网步进值"],
-    ["LGRID_RETAIN_COUNT", "保留利润数"],
-    ["LGRID_ADD_PCT", "每网追加"],
     ["DATA_API_LICENCE", "数据接口证书"]
 ]);
 

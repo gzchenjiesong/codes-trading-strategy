@@ -2,15 +2,20 @@ import { describe, it, expect } from "vitest";
 import { PluginEnv } from "../src/plugin_env";
 import { GridTradingModeThree } from "../src/grid_trading_m3";
 
-// 真实 .gtv 样例（取自 sz159875-新能源ETF）
+// 真实 .gtv 样例（改造后：删 STEP 行，新增第0格，小网从 1 开始）
 const SAMPLE_GTV = [
     "mode_three,159875,新能源ETF,sz,0.75,0.525",
     "BASE,10000,0.7,0.005,3,100,0.10,0.25,0.50,0.53",
-    "STEP,0.061,0,3,0.04,0,2,0.02,0,1",
     "INTEREST,2025,0.045,40,0.85",
-    "SGRID,小网0,100.00%,0.01,3",
-    "BUY,2024-01-23,小网0,0.760,12000",
-    "SELL,2024-02-10,小网0,0.800,11000",
+    "SGRID,小网0,106.10%,0,0",
+    "SGRID,小网1,100.00%,0.01,3",
+    "SGRID,小网2,94.23%,0.06,3",
+    "MGRID,中网0,104.00%,0,0",
+    "MGRID,中网1,87.06%,2.01,1.5",
+    "LGRID,大网0,102.00%,0,0",
+    "LGRID,大网1,77.30%,3.01,1",
+    "BUY,2024-01-23,小网1,0.760,12000",
+    "SELL,2024-02-10,小网1,0.800,11000",
 ].join("\n");
 
 function makeGrid(): GridTradingModeThree
@@ -29,7 +34,6 @@ describe("ParseRawData 解析", () =>
         expect(grid.market_code).toBe("sz");
         expect(grid.target_price).toBe(0.75);
         expect(grid.current_price).toBe(0.525);
-        expect(grid.is_empty).toBe(true); // ParseRawData 不改变 is_empty
     });
 
     it("解析 BASE 行网格参数", () =>
@@ -45,16 +49,6 @@ describe("ParseRawData 解析", () =>
         expect(grid.grid_settings.CLEAR_STEP_PCT).toBe(0.25);
     });
 
-    it("解析 STEP 行步进参数", () =>
-    {
-        const grid = makeGrid();
-        grid.ParseRawData(SAMPLE_GTV);
-        expect(grid.grid_settings.SGRID_STEP_PCT).toBe(0.061);
-        expect(grid.grid_settings.SGRID_RETAIN_COUNT).toBe(3);
-        expect(grid.grid_settings.MGRID_STEP_PCT).toBe(0.04);
-        expect(grid.grid_settings.LGRID_STEP_PCT).toBe(0.02);
-    });
-
     it("解析 INTEREST 行计息参数", () =>
     {
         const grid = makeGrid();
@@ -65,21 +59,24 @@ describe("ParseRawData 解析", () =>
         expect(grid.grid_settings.INTEREST_TRIGGER).toBe(0.85);
     });
 
-    it("解析 SGRID 步进表", () =>
+    it("解析第0格（卖出参考格）", () =>
     {
         const grid = makeGrid();
         grid.ParseRawData(SAMPLE_GTV);
-        expect(grid.sgrid_step_table.length).toBe(1);
-        expect(grid.sgrid_step_table[0]).toEqual(["小网0", "100.00%", "0.01", "3"]);
+        // 第0格：价格位 = 首网卖出价
+        expect(grid.sgrid_step_table[0]).toEqual(["小网0", "106.10%", "0", "0"]);
+        expect(grid.sgrid_step_table[1]).toEqual(["小网1", "100.00%", "0.01", "3"]);
+        expect(grid.mgrid_step_table[0]).toEqual(["中网0", "104.00%", "0", "0"]);
+        expect(grid.lgrid_step_table[0]).toEqual(["大网0", "102.00%", "0", "0"]);
     });
 
-    it("解析 BUY/SELL 交易记录（买卖配对后 buy_grid_record 清空）", () =>
+    it("解析 BUY/SELL 交易记录（小网从 1 开始，买卖配对后 buy_grid_record 清空）", () =>
     {
         const grid = makeGrid();
         grid.ParseRawData(SAMPLE_GTV);
         expect(grid.raw_trading_record.length).toBe(2);
-        expect(grid.raw_trading_record[0]).toEqual(["BUY", "2024-01-23", "小网0", "0.760", "12000"]);
-        expect(grid.raw_trading_record[1]).toEqual(["SELL", "2024-02-10", "小网0", "0.800", "11000"]);
+        expect(grid.raw_trading_record[0]).toEqual(["BUY", "2024-01-23", "小网1", "0.760", "12000"]);
+        expect(grid.raw_trading_record[1]).toEqual(["SELL", "2024-02-10", "小网1", "0.800", "11000"]);
         expect(grid.buy_grid_record).toEqual([]);
     });
 
@@ -91,6 +88,32 @@ describe("ParseRawData 解析", () =>
     });
 });
 
+describe("InitTradingTable 首网卖出价（第0格逻辑）", () =>
+{
+    it("首网（小网1）卖出价 = 第0格价格位", () =>
+    {
+        const grid = makeGrid();
+        grid.ParseRawData(SAMPLE_GTV);
+        grid.InitTradingTable();
+        // trading_table[1] = 小网1（首网）
+        expect(grid.trading_table[1][0]).toBe("小网1");
+        // 买入价 = 目标价 × 100% = 0.75
+        expect(grid.trading_table[1][3]).toBe("0.750");
+        // 卖出价 = 目标价 × 106.10% = 0.795（第0格价格位）
+        expect(grid.trading_table[1][7]).toBe("0.795");
+    });
+
+    it("小网2 卖出价 = 小网1 的买入价（100%）", () =>
+    {
+        const grid = makeGrid();
+        grid.ParseRawData(SAMPLE_GTV);
+        grid.InitTradingTable();
+        expect(grid.trading_table[2][0]).toBe("小网2");
+        expect(grid.trading_table[2][3]).toBe("0.706"); // 0.75 × 94.23% 向下取整
+        expect(grid.trading_table[2][7]).toBe("0.750"); // 0.75 × 100%
+    });
+});
+
 describe("CalcClearPrice / CalcGridIncomes", () =>
 {
     it("计算清仓价（CLEAR_STEP_PCT=0.25）", () =>
@@ -99,9 +122,7 @@ describe("CalcClearPrice / CalcGridIncomes", () =>
         grid.target_price = 0.75;
         grid.grid_settings.TRADING_PRICE_PRECISION = 3;
         grid.grid_settings.CLEAR_STEP_PCT = 0.25;
-        // 第一档：price_step = 125/100 = 1.25 → FixedPrice(0.75, 1.25, 3) = 0.937
         expect(grid.CalcClearPrice(0.25, 1)).toBe(0.937);
-        // 第二档：price_step = 156/100 = 1.56 → FixedPrice(0.75, 1.56, 3) = 1.17
         expect(grid.CalcClearPrice(0.25, 2)).toBe(1.17);
     });
 
@@ -111,7 +132,6 @@ describe("CalcClearPrice / CalcGridIncomes", () =>
         grid.target_price = 0.75;
         grid.grid_settings.TRADING_PRICE_PRECISION = 3;
         grid.grid_settings.CLEAR_STEP_PCT = 0.25;
-        // retain_count=1000，第一档清仓价 0.937，平均清仓价 = 0.937*0.4 + 1.17*0.6 = 0.3748 + 0.702 = 1.0768
         const [first_income, clear_income] = grid.CalcGridIncomes(1000);
         expect(first_income).toBe(1000 * 0.937);
         expect(clear_income).toBeCloseTo(1000 * 1.0768, 0);

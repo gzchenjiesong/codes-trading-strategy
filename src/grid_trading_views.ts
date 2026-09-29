@@ -74,8 +74,8 @@ export class GridTradingViews
 
     InitStockTable(this: GridTrading)
     {
-        // 最高卖出价为清网价
-        this.empty_price = FixedPrice(this.target_price, 1.0 + this.grid_settings.SGRID_STEP_PCT, this.grid_settings.TRADING_PRICE_PRECISION);
+        // 最高卖出价为清网价（遍历 trading_table 取最高卖出价）
+        this.empty_price = 0;
         for (let idx=1; idx<this.trading_table.length; idx++)
         {
             if (Number(this.trading_table[idx][7]) > this.empty_price)
@@ -117,16 +117,14 @@ export class GridTradingViews
         this.param_table = [
             ["首网目标金额", String(this.grid_settings.ONE_GRID_LIMIT), "最大回撤值", ToPercent(this.grid_settings.MAX_SLUMP_PCT), "最大涨跌幅", ToPercent(this.grid_settings.MAX_RISE_PCT)],
             ["触发价加点", String(this.grid_settings.TRIGGER_ADD_POINT), "每手份数额", String(this.grid_settings.MIN_BATCH_COUNT), "交易价精度", String(this.grid_settings.TRADING_PRICE_PRECISION)],
-            ["小网步进值", ToPercent(this.grid_settings.SGRID_STEP_PCT), "中网步进值", ToPercent(this.grid_settings.MGRID_STEP_PCT), "大网步进值", ToPercent(this.grid_settings.LGRID_STEP_PCT)],
-            ["投入追加值", ToPercent(this.grid_settings.SGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.MGRID_ADD_PCT), "投入追加值", ToPercent(this.grid_settings.LGRID_ADD_PCT)],
-            ["保留利润数", String(this.grid_settings.SGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.MGRID_RETAIN_COUNT), "保留利润数", String(this.grid_settings.LGRID_RETAIN_COUNT)],
         ];
     }
 
     InitTradingAnalysis(this: GridTrading)
     {
         const price = this.target_price;
-        const rise_pct = this.grid_settings.SGRID_STEP_PCT;
+        // 反弹目标涨幅 = 首网卖出价涨幅（第0格价格位 - 1）
+        const rise_pct = ToNumber(this.sgrid_step_table[0][1]) - 1;
         const table:Array<Array<string>> = this.trading_table;
         function Analysis(slump_pct: number) 
         {
