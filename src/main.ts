@@ -79,7 +79,7 @@ export default class TradingStrategy extends Plugin
 
     async FetchAllStockCurrentPrice()
     {
-        const grid_folder = this.app.vault.getAbstractFileByPath('网格策略');
+        const grid_folder = this.app.vault.getAbstractFileByPath('03-网格策略');
         let price_cache = new Map<string, number>;
         if (grid_folder instanceof TFolder)
         {

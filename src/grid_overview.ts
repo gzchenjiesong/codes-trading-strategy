@@ -91,7 +91,7 @@ export class GTOView extends TextFileView
         let active_table: string [][] = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "网格种类", "交易日期", "买入价格", "买入份数", "买入金额", "当前价格", "持仓收益", "卖出份数", "累积筹码"]];
         this.interest_overview = [[ROW_TYPE_TITLE, "标的代号", "标的名称", "计息时间", "当时持仓", "当时价位", "买入价格", "买入份数", "买入金额", "投入比例", 
                 "止盈价位", "止盈价格", "卖出价格", "卖出份数", "卖出金额", "卖出收益", "年化收益"]];
-        const grid_folder = this.vault.getAbstractFileByPath('网格策略');
+        const grid_folder = this.vault.getAbstractFileByPath('03-网格策略');
         let grid_file_names: string [] = [];
         if (grid_folder instanceof TFolder)
         {

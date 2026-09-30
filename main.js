@@ -1992,7 +1992,7 @@ var GTOView = class extends import_obsidian3.TextFileView {
       "\u5356\u51FA\u6536\u76CA",
       "\u5E74\u5316\u6536\u76CA"
     ]];
-    const grid_folder = this.vault.getAbstractFileByPath("\u7F51\u683C\u7B56\u7565");
+    const grid_folder = this.vault.getAbstractFileByPath("03-\u7F51\u683C\u7B56\u7565");
     let grid_file_names = [];
     if (grid_folder instanceof import_obsidian3.TFolder) {
       for (let index = 0; index < grid_folder.children.length; index++) {
@@ -2352,7 +2352,7 @@ var TradingStrategy = class extends import_obsidian5.Plugin {
     this.saveData(setting_data);
   }
   async FetchAllStockCurrentPrice() {
-    const grid_folder = this.app.vault.getAbstractFileByPath("\u7F51\u683C\u7B56\u7565");
+    const grid_folder = this.app.vault.getAbstractFileByPath("03-\u7F51\u683C\u7B56\u7565");
     let price_cache = /* @__PURE__ */ new Map();
     if (grid_folder instanceof import_obsidian5.TFolder) {
       for (let index = 0; index < grid_folder.children.length; index++) {
