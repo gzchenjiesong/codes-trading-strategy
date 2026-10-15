@@ -140,6 +140,8 @@ export class GridTradingSettings {
         this.MIN_BATCH_COUNT = Number(strs[5]);
         this.MAX_RISE_PCT = Number(strs[6]);
         this.CLEAR_STEP_PCT = Number(strs[7]);
+        this.MINIMUM_BUY_PCT = Number(strs[8]);
+        this.BOTTOM_BUY_PCT = Number(strs[9]);
     }
 
     PackQuant(): string
