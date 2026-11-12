@@ -66,6 +66,14 @@ describe("FixedPrice / AlignPrice", () =>
         expect(FixedPrice(3.348, 0.9, 3)).toBe(3.013);
     });
 
+    it("FixedPrice 百分位 3 位小数消除浮点误差", () =>
+    {
+        // 43.535% → Number("43.535")/100 浮点成 0.4353499...，round 应还原为 0.43535 而非截成 0.43534
+        expect(FixedPrice(1.0, 0.43535, 5)).toBe(0.43535);
+        // 2 位小数不受影响
+        expect(FixedPrice(1.0, 0.4353, 5)).toBe(0.4353);
+    });
+
     it("AlignPrice 直接按精度取整", () =>
     {
         expect(AlignPrice(3.348, 3)).toBe(3.348);

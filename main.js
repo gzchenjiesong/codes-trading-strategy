@@ -556,7 +556,7 @@ var import_obsidian2 = require("obsidian");
 // src/mymath.ts
 function FixedPrice(price, pct, precision) {
   const scale = 10 ** precision;
-  return Math.floor(Math.floor(price * scale) * Math.floor(pct * 1e4) / 1e4) / scale;
+  return Math.floor(Math.floor(price * scale) * Math.round(pct * 1e5) / 1e5) / scale;
 }
 function AlignPrice(price, precision) {
   const scale = 10 ** precision;

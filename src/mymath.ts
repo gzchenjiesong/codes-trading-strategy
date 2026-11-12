@@ -5,8 +5,9 @@
 export function FixedPrice(price: number, pct: number, precision: number)
 {
     const scale = 10 ** precision;
-    // 百分位保留小数点后一位
-    return Math.floor(Math.floor(price * scale) * Math.floor(pct * 10000) / 10000) / scale;
+    // pct 比例值对齐到 5 位小数（= 百分数 3 位小数，如 43.535%）。
+    // 用 round 而非 floor：消除 Number("43.535")/100 的浮点误差（0.4353499... 应还原为 0.43535）
+    return Math.floor(Math.floor(price * scale) * Math.round(pct * 100000) / 100000) / scale;
 }
 
 export function AlignPrice(price: number, precision: number)
